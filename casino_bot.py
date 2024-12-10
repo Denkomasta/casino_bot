@@ -2,8 +2,9 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 import os
-
 import json
+
+import black_jack
 
 def load_stats():   # returns dict
     try:
@@ -41,9 +42,13 @@ async def hello(ctx):
 # command for testing
 @bot.command(name='debug', help='Debugging')
 async def debug(ctx):
-    await ctx.send(f'Hello, {ctx.author}!')
+    game = black_jack.BlackJack()
+    add_p =  game.add_player("Grazl", 10)
+    format_cs = game.format_cards()
+    give_cs = game.give_cards()
+    await ctx.send(f'Blackjack debug: add_player = {add_p}, format_cards = {format_cs}, give_cards = {give_cs}')
 
-# command for testing
+# command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
     await ctx.send(f'Hello, {ctx.author}!')     # TODO add registration of player

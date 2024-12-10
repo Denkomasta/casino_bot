@@ -29,6 +29,7 @@ class BlackJack:
         self.crupier_cards = set()
         self.players_cards = {}
         self.players_bets = {}
+        self.players = {}
     
     def add_player(self, player_name: str, bet: int=0) -> str:
         if (self.players.get(player_name) is not None):
