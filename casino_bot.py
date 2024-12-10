@@ -3,6 +3,22 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 
+import json
+
+def load_stats():   # returns dict
+    try:
+        with open("player_stats.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+def save_stats():
+    with open("player_stats.json", "w") as f:
+        json.dump(player_stats, f, indent=4)
+
+player_stats = load_stats()
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 BOTNAME = "DisCas"
@@ -21,6 +37,16 @@ async def on_ready():
 @bot.command(name='hello', help='Replies with Hello!')
 async def hello(ctx):
     await ctx.send(f'Hello, {ctx.author}!')
+
+# command for testing
+@bot.command(name='debug', help='Debugging')
+async def debug(ctx):
+    await ctx.send(f'Hello, {ctx.author}!')
+
+# command for testing
+@bot.command(name='subscribe', help='Subscribe to casino to be able to play')
+async def subscribe(ctx):
+    await ctx.send(f'Hello, {ctx.author}!')     # TODO add registration of player
 
 # command info
 @bot.command(name='info', help=f'Information about {BOTNAME}!')
