@@ -1,3 +1,5 @@
+import random
+
 HEARTS = 0
 DIAMONDS = 1
 CLUBS = 2
@@ -15,11 +17,18 @@ class BlackJack:
         self.players_cards = {}
     
     def add_player(self, player_name: str) -> str:
-        if (self.players_cards.get(player_name) is None):
+        if (self.players_cards.get(player_name) is not None):
             return "Player " + player_name + " is already in the game!"
         
         self.players_cards[player_name] = set()
         return "Player " + player_name + " added to the game!"
+
+    def remove_player(self, player_name: str) -> str:
+        if (self.players_cards.get(player_name) is None):
+            return "Player " + player_name + " is not in the game!"
+        
+        self.players_cards.pop(player_name)
+        return "Player " + player_name + " was removed from the game!"
 
 
 
