@@ -44,9 +44,8 @@ async def hello(ctx):
 async def debug(ctx):
     game = black_jack.BlackJack()
     add_p =  game.add_player("Grazl", 10)
-    format_cs = game.format_cards()
     give_cs = game.give_cards()
-    await ctx.send(f'Blackjack debug: add_player = {add_p}, format_cards = {format_cs}, give_cards = {give_cs}')
+    await ctx.send(f'Blackjack debug:\n add_player = {add_p}\n give_cards = {give_cs}')
 
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
@@ -70,7 +69,7 @@ async def leaderboard(ctx):
 
 # command pay
 @bot.command(name='pay', help='Pay another user money.')
-async def coinflip(ctx):
+async def pay(ctx):
     await ctx.send('Pay TBD')      # TODO add implementation of pay
 
 # command blackjack
