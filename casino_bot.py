@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-token = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")
+BOTNAME = "DisCas"
+CMD_PREFIX = "!"
+CHAIN_DELIM = ";"
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-botname = "DisCas"
+bot = commands.Bot(command_prefix=CMD_PREFIX, case_insensitive=True, intents=intents)
 
 @bot.event
 async def on_ready():
@@ -21,7 +23,7 @@ async def hello(ctx):
     await ctx.send(f'Hello, {ctx.author}!')
 
 # command info
-@bot.command(name='info', help=f'Information about {botname}!')
+@bot.command(name='info', help=f'Information about {BOTNAME}!')
 async def info(ctx):
     await ctx.send('I am nothing')     # TODO add info about bot
 
@@ -67,10 +69,16 @@ async def poker(ctx):
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    if message.author == bot.user or not message.content.startswith(CMD_PREFIX):
         return
 
-    await bot.process_commands(message)
+    # Command chaining
+    cmds = message.content.split(CHAIN_DELIM)
+
+    # Each command function needs to get its args using split.
+    for cmd in cmds:
+        message.content = cmd.strip()
+        await bot.process_commands(message)
 
 
-bot.run(token)
+bot.run(TOKEN)
