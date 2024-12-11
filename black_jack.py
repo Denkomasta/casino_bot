@@ -44,13 +44,17 @@ class Player:
         self.result = (-1, -1)
     
     def count_cards(self) -> int:
-        count: int = 0
+        count_a1: int = 0
+        count_a11: int = 0
         for card in self.cards:
-            count += card.value if card.value <= 10 else 10
-        return count
+            count_a1 += card.value if card.value <= 10 else 10
+            count_a11 += 10 if card.value > 10 else 11 if card.value == 1 else card.value
+        if (count_a11 > 21):
+            return count_a1
+        return count_a11
     
     def show_cards(self) -> str:
-        show = f"{self.name}: "
+        show = f"@{self.name} |{self.count_cards()}|: "
         for card in self.cards:
             show += f"{card.show_card()} "
         return show
@@ -59,7 +63,7 @@ class Player:
 
 class BlackJack:
     deck: list[Card]
-    crupier: Player = Player("Crupier", 0)
+    crupier: Player = Player("DisCas", 0)
     players: dict[str, Player]
 
 
@@ -70,20 +74,20 @@ class BlackJack:
     
     def add_player(self, player_name: str, bet: int=0) -> str:
         if (self.players.get(player_name) is not None):
-            return "Player " + player_name + " is already in the game!"
+            return "Player @" + player_name + " is already in the game!"
         
         self.players[player_name] = Player(player_name, bet)
-        return "Player " + player_name + " added to the game!"
+        return "Player @" + player_name + " added to the game!"
 
     def remove_player(self, player_name: str) -> str:
         if (self.players.get(player_name) is None):
-            return "Player " + player_name + " is not in the game!"
+            return "Player @" + player_name + " is not in the game!"
         
         self.players.pop(player_name)
-        return "Player " + player_name + " was removed from the game!"
+        return "Player @" + player_name + " was removed from the game!"
     
     def game_init(self) -> str:
-        return "Players who wants to participate write \"TBD bet\" after all of you are ready write \"TBD start\""
+        return "Players who wants to participate write \"!blackjack add -bet-\" after all of you are ready write \"!blackjack start\""
     
 
     def show_game(self)-> str:
@@ -151,7 +155,25 @@ class BlackJack:
     def show_results(self) -> str:
         show: str = ""
         for player in self.players.values():
-            show += f"{player.name}: {player.result}\n"
+            show += f"@{player.name}: {player.result}\n"
+        return show
+    
+    def game_reset(self):
+        self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
+        self.crupier.cards = []
+        for player in self.players.values():
+            player.state = True
+            player.result = (-1, -1)
+            player.cards = []
+
+    def change_bet(self, name: str, bet: int):
+        self.players[name].bet = bet
+
+    def show_status(self) ->str:
+        show: str = "Waiting to finish turns of:\n"
+        for player in self.players.values():
+            if (player.state):
+                show += f"@{player.name}\n"
         return show
 
 
