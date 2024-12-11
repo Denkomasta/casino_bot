@@ -199,7 +199,7 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        can_play: bool = self.player_hit(ctx.author.name):
+        can_play: bool = self.player_hit(ctx.author.name)
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
         if (not can_play):
             await ctx.send(f"{ctx.author.name} cannot hit anymore")
