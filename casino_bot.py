@@ -18,7 +18,7 @@ def save_stats():
     with open("player_stats.json", "w") as f:
         json.dump(player_stats, f, indent=4)
 
-player_stats = load_stats()
+player_stats = load_stats() # TODO how to handle this global variable
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -58,7 +58,11 @@ async def debug(ctx):
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
-    await ctx.send(f'Hello, {ctx.author}!')     # TODO add registration of player
+    if ctx.author not in player_stats.keys():
+        player_stats[(ctx.author.id, ctx.author.global_name)] = 10     # TODO What do we want to save?
+        await ctx.send(f'{ctx.author} is new member of {BOTNAME}')
+    else:
+        await ctx.send(f'{ctx.author} is already a member of {BOTNAME}')
 
 # command info
 @bot.command(name='info', help=f'Information about {BOTNAME}!')
@@ -118,5 +122,10 @@ async def on_message(message):
         message.content = cmd.strip()
         await bot.process_commands(message)
 
+
+# saving data about players to json file - TODO doesnt work with signals
+@bot.event
+async def on_close():
+    save_stats()
 
 bot.run(TOKEN)
