@@ -114,6 +114,8 @@ class BlackJack:
             return f"{name} cannot hit anymore"
         card: Card = self.deck.pop(randrange(len(self.deck)))
         player.cards.append(card)
+        if (player.count_cards() == 21):
+            player.state = False
         if (player.count_cards() > 21):
             player.state = False
             return f"{name} has over 21 and won't be able to hit anymore"
@@ -144,6 +146,9 @@ class BlackJack:
             player_count: int = player.count_cards()
             if (player_count > 21):
                 player.result = (DEFEAT, 0)
+                continue
+            if (player_count == 21):
+                player.result = (VICTORY, player.bet * 2)
                 continue
             if (crupiers_count > 21 or player_count > crupiers_count):
                 player.result = (VICTORY, player.bet * 2)
