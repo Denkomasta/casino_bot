@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod # Importing abstract classes functionality
+from random import randrange
+import discord
+from discord.ext import commands
 
 SUCCESS = 0
-EINVALID_PLAYER = 1
-ENUMBER_OUT_OF_RANGE = 2
-EINSUFFICIENT_FUNDS = 3
-EREADY = 4
+EINVALID_PLAYER = -1
+ENUMBER_OUT_OF_RANGE = -2
+EINSUFFICIENT_FUNDS = -3
+EREADY = -4
 
 
 class RNGPlayer:
@@ -73,14 +76,23 @@ class RNGGame(ABC):
         self.players[name].ready = True
         self.players_not_ready -= 1
         return SUCCESS
-        
-    def check_ready(self) -> bool:
+    
+    def roll(self) -> int:
+        if self.players_not_ready > 0:
+            return EREADY
+        result: int = randrange(self.lowest, self.highest)
+        if (result in self.bets.keys()):
+            for bet in self.bets[result]:
+                bet.player.balance += bet.bet * bet.odd
         for player in self.players.values():
-            if not player.ready:
-                return False
-        return True
-    
-    
+            player.ready = False
+            self.players_not_ready += 1
+        self.bets = dict()
+        self.last_roll = result
+        return SUCCESS
+        
+
+        
         
 
 
