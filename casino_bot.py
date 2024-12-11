@@ -99,34 +99,44 @@ async def blackjack(ctx, *, arg_str):
                 await ctx.send(f'With init you can\'t add another argument')
             BlackJack_Game = BlackJack()
             await ctx.send(f'{BlackJack_Game.game_init()}')
+            return
         case "add":
             
             if (BlackJack_Game is None):
                 await ctx.send("Game is not initialized yet")
+                return
             bet = 0
             if (len(argv) == 2):
                 bet = int(argv[1])
             await ctx.send(f'{BlackJack_Game.add_player(ctx.author.name, bet)}')
+            return
         case "start":
             BlackJack_Game.deal_cards()
             await ctx.send(f'{BlackJack_Game.show_game()}')
-            
+            return
         case "hit":
             if (len(argv) != 1):
                 await ctx.send(f'With start you can\'t add another argument')
+                return
             BlackJack_Game.player_hit(ctx.author.name)
             if (BlackJack_Game.is_crupiers_turn()):
                 BlackJack_Game.crupiers_turn()
+                BlackJack_Game.evaluate()
                 await ctx.send(f'{BlackJack_Game.show_game()}\n\n\n{BlackJack_Game.show_results()}')
+                return
             await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
         case "stand":
             if (len(argv) != 1):
                 await ctx.send(f'With start you can\'t add another argument')
+                return
             BlackJack_Game.player_stand(ctx.author.name)
             if (BlackJack_Game.is_crupiers_turn()):
                 BlackJack_Game.crupiers_turn()
+                BlackJack_Game.evaluate()
                 await ctx.send(f'{BlackJack_Game.show_game()}\n\n\n{BlackJack_Game.show_results()}')
+                return
             await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
+            return
         case _:
             await ctx.send("Invalid command")
 
