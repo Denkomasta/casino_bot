@@ -12,23 +12,55 @@ SPADES = 3
 class Card:
     suit: int
     value: int
-    show: bool
+    showable: bool
+    ascii: list[list[str]]
+    
 
     def __init__(self, suit: int, value: int, show: bool= True):
         self.suit = suit
         self.value = value
-        self.show = show
+        self.showable = show
+        self.ascii = [
+            ["┌","─","─","─","─","─","┐"],
+            ["│","V"," "," "," "," ","│"],
+            ["│"," "," ","S"," "," ","│"],
+            ["│"," "," "," "," ","V","│"],
+            ["└","─","─","─","─","─","┘"]
+        ]
+    
+    def fill_ascii(self) -> None:
+        suit = self.suit
+        value = self.value
 
-    def show_card(self):
-        if (not self.show):
-            return "??"
+        if (not self.showable):
+            suit = -1
+            value = -1
+
+        suits = {0: "♥", 1: "♦", 2: "♣", 3: "♠", -1: "?"}
+        values = {1: "A", 10: "1", 11: "J", 12: "Q", 13: "K", -1: "?"}
+
+        if (value == 10):
+            self.ascii[1][1] = "1"
+            self.ascii[1][2] = "0"
+            self.ascii[3][4] = "1"
+            self.ascii[3][5] = "0"
+            self.ascii[2][3] = suits.get(suit, "?")
+            return
+
+        self.ascii[1][1] = values.get(value, str(value))
+        self.ascii[2][3] = suits.get(suit, "?")
+        self.ascii[3][5] = values.get(value, str(value))
         
-        suits = {0: "♥", 1: "♦", 2: "♣", 3: "♠"}
-        values = {1: "A", 11: "J", 12: "Q", 13: "K"}
 
-        suit = suits.get(self.suit, "?")
-        value = values.get(self.value, str(self.value))
-        return f"{value}{suit}"
+    def show_card(self) ->str:
+        self.fill_ascii()
+        show: str = ""
+        for lst in self.ascii:
+            show += "`"
+            show += "".join(lst)
+            show += "`"
+            show += "\n"
+        return show
 
 class Player:
     name: str
@@ -47,7 +79,7 @@ class Player:
         count_a1: int = 0
         count_a11: int = 0
         for card in self.cards:
-            if (card.show):
+            if (card.showable):
                 count_a1 += card.value if card.value <= 10 else 10
                 count_a11 += 10 if card.value > 10 else 11 if card.value == 1 else card.value
         if (count_a11 > 21):
@@ -55,9 +87,15 @@ class Player:
         return count_a11
     
     def show_cards(self) -> str:
-        show = f"{self.name} |{self.count_cards()}|: "
+        show = f"{self.name} |{self.count_cards()}|:\n"
         for card in self.cards:
-            show += f"{card.show_card()} "
+            card.fill_ascii()
+        for index in range(5):
+            show += "`"
+            for card in self.cards:
+                show += "".join(card.ascii[index])
+            show += "`"
+            show += "\n"
         return show
 
 
@@ -100,7 +138,7 @@ class BlackJack:
 
     def deal_cards(self) -> None:
         hidden_card: Card = self.deck.pop(randrange(len(self.deck)))
-        hidden_card.show = False
+        hidden_card.showable = False
         self.crupier.cards.append(hidden_card)
         for _ in range(2):
             for player in self.players.values():
@@ -136,7 +174,7 @@ class BlackJack:
     
     def crupiers_turn(self):
         for card in self.crupier.cards:
-            card.show = True
+            card.showable = True
         while (self.crupier.count_cards() < 17):
             self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
 
