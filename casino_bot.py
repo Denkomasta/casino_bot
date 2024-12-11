@@ -6,7 +6,7 @@ import json
 
 from black_jack import BlackJack, Card, Player
 
-BlackJack_Game = None
+Games: dict[int, BlackJack] = {}
 
 def load_stats():   # returns dict
     try:
@@ -92,75 +92,22 @@ async def blackjack(ctx, *, arg_str):
     argv = arg_str.split(' ')
     if (len(argv) > 2 or len(argv) < 1):
         await ctx.send(f'Invalid number of arguments')
-    global BlackJack_Game
-    match (argv[0]):
-        case "init":
-            if (len(argv) != 1):
-                await ctx.send(f'With init you can\'t add another argument')
-            BlackJack_Game = BlackJack()
-            await ctx.send(f'{BlackJack_Game.game_init()}')
+    global Games
+    if (argv[0] == "create"):
+        if (ctx.channel.id in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        case "add":
-            bet = 0
-            if (len(argv) == 2):
-                bet = int(argv[1])
-            await ctx.send(f'{BlackJack_Game.add_player(ctx.author.name, bet)}')
+        Games[ctx.channel.id] = BlackJack()
+        await ctx.send(f'Game was created, join the game using \'join -bet-\' and start the game using \'start\'')
+        return
+    if (argv[0] == "exit"):
+        if (ctx.channel.id not in Games.keys()):
+            await ctx.send(f'Game does not exist')
             return
-        case "leave":
-            if (len(argv) != 1):
-                await ctx.send(f'With leave you can\'t add another argument')
-                return
-            await ctx.send(f'{BlackJack_Game.remove_player(ctx.author.name)}')
-            return
-        case "start":
-            BlackJack_Game.deal_cards()
-            await ctx.send(f'{BlackJack_Game.show_game()}')
-            return
-        case "hit":
-            if (len(argv) != 1):
-                await ctx.send(f'With hit you can\'t add another argument')
-                return
-            BlackJack_Game.player_hit(ctx.author.name)
-            if (BlackJack_Game.is_crupiers_turn()):
-                BlackJack_Game.crupiers_turn()
-                BlackJack_Game.evaluate()
-                await ctx.send(f'{BlackJack_Game.show_game()}\n\n{BlackJack_Game.show_results()}')
-                return
-            await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
-        case "stand":
-            if (len(argv) != 1):
-                await ctx.send(f'With stand you can\'t add another argument')
-                return
-            BlackJack_Game.player_stand(ctx.author.name)
-            if (BlackJack_Game.is_crupiers_turn()):
-                BlackJack_Game.crupiers_turn()
-                BlackJack_Game.evaluate()
-                await ctx.send(f'{BlackJack_Game.show_game()}\n\n{BlackJack_Game.show_results()}')
-                return
-            await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
-            return
-        case "reset":
-            if (len(argv) != 1):
-                await ctx.send(f'With reset you can\'t add another argument')
-                return
-            BlackJack_Game.game_reset()
-            await ctx.send("Game was succesfully reseted, you can change your bet using \"!blackjack bet -bet-\" or leave the game using \"!blackjack leave\"")
-            return
-        case "bet":
-            bet = 0
-            if (len(argv) == 2):
-                bet = int(argv[1])
-            BlackJack_Game.change_bet(ctx.author.name, bet)
-            await ctx.send(f"Bet changed succesfully to {bet}")
-            return
-        case "status":
-            if (len(argv) != 1):
-                await ctx.send(f'With status you can\'t add another argument')
-                return
-            await ctx.send(f'{BlackJack_Game.show_status()}')
-            return
-        case _:
-            await ctx.send("Invalid command")
+        Games.pop(ctx.channel.id)
+        await ctx.send(f'Game was exited')
+        return
+    await Games[ctx.channel.id].cmd_run(ctx, argv)
 
         # TODO add implementation of blackjack game
 

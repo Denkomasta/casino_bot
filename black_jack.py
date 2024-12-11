@@ -132,10 +132,9 @@ class BlackJack:
     async def cmd_run(self, ctx: commands.Context, args: list[str]) -> None:
         if (len(args) == 0):
             await ctx.send("There is no argument, use \"!blackjack help\" to see the options")
-        if (args[0] not in self.commands_dict.keys()):
+        if (args[0] not in self.commands_dict):
             await ctx.send("Invalid argument, use \"!blackjack help\" to see the options")
-        self.commands_dict[args[0]](ctx, args)
-        return
+        await self.commands_dict[args[0]](ctx, args)
 
     async def cmd_create(self, ctx: commands.Context, args: list[str]):
         """Handles the 'create' command."""
@@ -192,7 +191,7 @@ class BlackJack:
         await ctx.send(f"{self.show_game()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
-            await ctx.send(f"{self.show_results()}")
+            await ctx.send(f"{self.show_game()}\n{self.show_results()}")
 
     async def cmd_hit(self, ctx: commands.Context, args: list[str]):
         """Handles the 'hit' command."""
@@ -201,8 +200,13 @@ class BlackJack:
             return
         can_play: bool = self.player_hit(ctx.author.name)
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
+        if (self.is_crupiers_turn()):
+            self.crupiers_turn()
+            await ctx.send(f"{self.show_game()}\n{self.show_results()}")
+            return
         if (not can_play):
             await ctx.send(f"{ctx.author.name} cannot hit anymore")
+        
         
     async def cmd_stand(self, ctx: commands.Context, args: list[str]):
         """Handles the 'stand' command."""
@@ -212,7 +216,12 @@ class BlackJack:
         if (not self.player_stand(ctx.author.name)):
             await ctx.send(f"{ctx.author.name} already stands")
             return
+        if (self.is_crupiers_turn()):
+            self.crupiers_turn()
+            await ctx.send(f"{self.show_game()}\n{self.show_results()}")
+            return
         await ctx.send(f"{ctx.author.name} now stands")
+        
 
     async def cmd_bet(self, ctx: commands.Context, args: list[str]):
         """Handles the 'bet' command."""
