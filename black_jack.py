@@ -1,5 +1,9 @@
 from random import randrange
 
+DEFEAT = 0
+VICTORY = 1
+DRAW = 2
+
 HEARTS = 0
 DIAMONDS = 1
 CLUBS = 2
@@ -15,28 +19,53 @@ class Card:
         self.value = value
         self.show = show
 
+    def show_card(self):
+        if (not self.show):
+            return "??"
+        
+        suits = {0: "♥", 1: "♦", 2: "♣", 3: "♠"}
+        values = {1: "A", 11: "J", 12: "Q", 13: "K"}
+
+        suit = suits.get(self.suit, "?")
+        value = values.get(self.value, str(self.value))
+        return f"{value}{suit}"
+
 class Player:
     name: str
     cards: list[Card]
     bet: int
     state: bool
-    result: tuple[int, int]|None = None
+    result: tuple[int, int]
     def __init__(self, name: str, bet: int=0):
         self.name = name
         self.bet = bet
         self.cards = []
-        state = True
+        self.state = True
+        self.result = (-1, -1)
+    
+    def count_cards(self) -> int:
+        count: int = 0
+        for card in self.cards:
+            count += card.value if card.value <= 10 else 10
+        return count
+    
+    def show_cards(self) -> str:
+        show = f"{self.name}: "
+        for card in self.cards:
+            show += f"{card.show_card()} "
+        return show
+
 
 
 class BlackJack:
     deck: list[Card]
-    crupier_cards: list[Card] = []
+    crupier: Player = Player("Crupier", 0)
     players: dict[str, Player]
 
 
     def __init__(self):
         self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
-        self.crupier_cards = []
+        self.crupier.cards = []
         self.players = {}
     
     def add_player(self, player_name: str, bet: int=0) -> str:
@@ -56,39 +85,76 @@ class BlackJack:
     def game_init(self) -> str:
         return "Players who wants to participate write \"TBD bet\" after all of you are ready write \"TBD start\""
     
-    def format_card(self, card: Card):
-        if (not card.show):
-            return "??"
-        
-        suits = {0: "♥", 1: "♦", 2: "♣", 3: "♠"}
-        values = {1: "A", 11: "J", 12: "Q", 13: "K"}
 
-        suit = suits.get(card.suit, "?")
-        value = values.get(card.value, str(card.value))
-
-        return f"{value}{suit}"
-
-    def format_cards(self)-> str:
-        formated: str = "Crupier: "
-        for card in self.crupier_cards:
-            formated += f"{self.format_card(card)} "
-        formated += "\n"
+    def show_game(self)-> str:
+        show: str = ""
+        show += f"{self.crupier.show_cards()}\n"
         for player in self.players.values():
-            formated += f"{player.name}: "
-            for card in player.cards:
-                formated += f"{self.format_card(card)} "
-            formated += "\n"
-        return formated
-        
+            show += f"{player.show_cards()}\n"
+        return show
 
-    def give_cards(self) -> None:
+    def deal_cards(self) -> None:
         hidden_card: Card = self.deck.pop(randrange(len(self.deck)))
         hidden_card.show = False
-        self.crupier_cards.append(hidden_card)
+        self.crupier.cards.append(hidden_card)
         for _ in range(2):
             for player in self.players.values():
                 player.cards.append(self.deck.pop(randrange(len(self.deck))))
-        self.crupier_cards.append(self.deck.pop(randrange(len(self.deck))))
+        self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
+
+
+    def player_hit(self, name:str) -> str:
+        player: Player = self.players[name]
+        if (not player.state):
+            return f"{name} cannot hit anymore"
+        card: Card = self.deck.pop(randrange(len(self.deck)))
+        player.cards.append(card)
+        if (player.count_cards() > 21):
+            player.state = False
+            return f"{name} has over 21 and won't be able to hit anymore"
+        return "you can hit"
+    
+    def is_crupiers_turn(self) -> bool:
+        result: bool = True
+        for player in self.players.values():
+            result = result and not player.state
+        return result
+    
+    def player_stand(self, name: str) -> str:
+        player: Player = self.players[name]
+        if (not player.state):
+            return f"{name} u already stand"
+        player.state = False
+        return f"{name} now stands"
+    
+    def crupiers_turn(self):
+        for card in self.crupier.cards:
+            card.show = True
+        while (self.crupier.count_cards() < 17):
+            self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
+
+    def evaluate(self) -> None:
+        crupiers_count: int = self.crupier.count_cards()
+        for player in self.players.values():
+            player_count: int = player.count_cards()
+            if (player_count > 21):
+                player.result = (DEFEAT, 0)
+                continue
+            if (crupiers_count > 21 or player_count > crupiers_count):
+                player.result = (VICTORY, player.bet * 2)
+                continue
+            if (crupiers_count > player_count):
+                player.result = (DEFEAT, 0)
+                continue
+            player.result = (DRAW, player.bet)
+    
+    def show_results(self) -> str:
+        show: str = ""
+        for player in self.players.values():
+            show += f"{player.name}: {player.result}\n"
+        return show
+
+
         
 
 

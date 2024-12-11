@@ -44,12 +44,16 @@ async def hello(ctx):
 async def debug(ctx):
     game = black_jack.BlackJack()
     add_p1 =  game.add_player("Grazl", 10)
-    add_p2 =  game.add_player("Čurin")
-    add_p3 =  game.add_player("Šmajdalf", 10)
-    add_p4 =  game.add_player("Grazl")
-    game.give_cards()
-    format_cards = game.format_cards()
-    await ctx.send(f'Blackjack debug:\nadd_player1 = {add_p1}\nadd_player2 = {add_p2}\nadd_player3 = {add_p3}\nadd_player4 = {add_p4}\n format_cards = {format_cards}')
+    game.deal_cards()
+    show_card1 = game.show_game()
+    game.player_hit("Grazl")
+    game.player_stand("Grazl")
+    show_card2 = game.show_game()
+    game.crupiers_turn()
+    show_card3 = game.show_game()
+    game.evaluate()
+    results = game.show_results()
+    await ctx.send(f'show_cards1 =\n{show_card1}\nshow_cards2 =\n{show_card2}\nshow_cards3 =\n{show_card3}\nresults =\n{results}')
 
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
