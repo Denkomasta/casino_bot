@@ -1,4 +1,7 @@
 from random import randrange
+from typing import Callable
+import discord
+from discord.ext import commands
 
 DEFEAT = 0
 VICTORY = 1
@@ -102,32 +105,146 @@ class Player:
 
 class BlackJack:
     deck: list[Card]
-    crupier: Player = Player("DisCas", 0)
+    crupier: Player = Player("Dealer", 0)
     players: dict[str, Player]
-
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], None]] #dict of str/functions
+    is_playing: bool
 
     def __init__(self):
         self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
         self.crupier.cards = []
         self.players = {}
+        self.is_playing = False
+        self.commands_dict = {
+        "create": self.cmd_create,
+        "exit": self.cmd_exit,
+        "restart": self.cmd_restart,
+        "join": self.cmd_join,
+        "leave": self.cmd_leave,
+        "start": self.cmd_start,
+        "hit": self.cmd_hit,
+        "stand": self.cmd_stand,
+        "bet": self.cmd_bet,
+        "status": self.cmd_status,
+        "help": self.cmd_help
+    } 
+
+    async def cmd_run(self, ctx: commands.Context, args: list[str]) -> None:
+        if (len(args) == 0):
+            await ctx.send("There is no argument, use \"!blackjack help\" to see the options")
+        if (args[0] not in self.commands_dict.keys()):
+            await ctx.send("Invalid argument, use \"!blackjack help\" to see the options")
+        self.commands_dict[args[0]](ctx, args)
+        return
+
+    async def cmd_create(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'create' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (self.is_playing):
+            await ctx.send(f"Game is running right now, wait until is ends or use 'exit'")
+            return
+        
+        await ctx.send("Players who wants to participate write \"!blackjack add -bet-\" after all of you are ready write \"!blackjack start\"")
+
+    async def cmd_exit(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'exit' command."""
+        await ctx.send("Command 'exit' invoked.")
+
+    async def cmd_restart(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'restart' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (self.is_playing):
+            await ctx.send(f"Game is running right now, wait until is ends or use 'exit'")
+            return
+        self.game_restart()
+        await ctx.send("Game was succesfully reseted, you can change your bet using \"!blackjack bet -bet-\" or leave the game using \"!blackjack leave\"")
+
+    async def cmd_join(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'join' command."""
+        if (len(args) > 2):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be < 2")
+            return
+        if (not self.add_player(ctx.author.name)):
+             await ctx.send(f"Player {ctx.author.name} is already in the game!")
+             return
+        await ctx.send(f"Player {ctx.author.name} joined the game!")
+
+    async def cmd_leave(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'leave' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (not self.remove_player(ctx.author.name)):
+             await ctx.send(f"Player {ctx.author.name} is not in the game!")
+             return
+        await ctx.send(f"Player {ctx.author.name} was removed from the game!")
+
+    async def cmd_start(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'start' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        self.deal_cards()
+        await ctx.send(f"{self.show_game()}")
+        if (self.is_crupiers_turn()):
+            self.crupiers_turn()
+            await ctx.send(f"{self.show_results()}")
+
+    async def cmd_hit(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'hit' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        can_play: bool = self.player_hit(ctx.author.name):
+        await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
+        if (not can_play):
+            await ctx.send(f"{ctx.author.name} cannot hit anymore")
+        
+    async def cmd_stand(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'stand' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (not self.player_stand(ctx.author.name)):
+            await ctx.send(f"{ctx.author.name} already stands")
+            return
+        await ctx.send(f"{ctx.author.name} now stands")
+
+    async def cmd_bet(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'bet' command."""
+        if (len(args) != 2):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 2")
+            return
+        bet = int(args[1])
+        self.change_bet(ctx.author.name, bet)
+        await ctx.send(f"{ctx.author.name}'s bet changed to {bet}")
+
+    async def cmd_status(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'status' command."""
+        await ctx.send("Command 'status' invoked.")
+
+    async def cmd_help(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'help' command."""
+        await ctx.send("Command 'status' invoked.")
+
     
-    def add_player(self, player_name: str, bet: int=0) -> str:
+    def add_player(self, player_name: str, bet: int=0) -> bool:
         if (self.players.get(player_name) is not None):
-            return "Player " + player_name + " is already in the game!"
+            return False
         
         self.players[player_name] = Player(player_name, bet)
-        return "Player " + player_name + " added to the game!"
+        return True
 
-    def remove_player(self, player_name: str) -> str:
+    def remove_player(self, player_name: str) -> bool:
         if (self.players.get(player_name) is None):
-            return "Player " + player_name + " is not in the game!"
+            return False
         
         self.players.pop(player_name)
-        return "Player " + player_name + " was removed from the game!"
-    
-    def game_init(self) -> str:
-        return "Players who wants to participate write \"!blackjack add -bet-\" after all of you are ready write \"!blackjack start\""
-    
+        return True
 
     def show_game(self)-> str:
         show: str = ""
@@ -146,18 +263,17 @@ class BlackJack:
         self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
 
 
-    def player_hit(self, name:str) -> str:
+    def player_hit(self, name:str) -> bool:
         player: Player = self.players[name]
         if (not player.state):
-            return f"{name} cannot hit anymore"
+            return False
         card: Card = self.deck.pop(randrange(len(self.deck)))
         player.cards.append(card)
         if (player.count_cards() == 21):
             player.state = False
         if (player.count_cards() > 21):
             player.state = False
-            return f"{name} has over 21 and won't be able to hit anymore"
-        return "you can hit"
+        return True
     
     def is_crupiers_turn(self) -> bool:
         result: bool = True
@@ -165,18 +281,19 @@ class BlackJack:
             result = result and not player.state
         return result
     
-    def player_stand(self, name: str) -> str:
+    def player_stand(self, name: str) -> bool:
         player: Player = self.players[name]
         if (not player.state):
-            return f"{name} u already stand"
+            return False
         player.state = False
-        return f"{name} now stands"
+        return True
     
     def crupiers_turn(self):
         for card in self.crupier.cards:
             card.showable = True
         while (self.crupier.count_cards() < 17):
             self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
+        self.evaluate()
 
     def evaluate(self) -> None:
         crupiers_count: int = self.crupier.count_cards()
@@ -202,7 +319,7 @@ class BlackJack:
             show += f"{player.name}: {player.result}\n"
         return show
     
-    def game_reset(self):
+    def game_restart(self):
         self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
         self.crupier.cards = []
         for player in self.players.values():
