@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 import os
 import json
 
-import black_jack
+from black_jack import BlackJack, Card, Player
+
+BlackJack_Game = None
 
 def load_stats():   # returns dict
     try:
@@ -42,7 +44,7 @@ async def hello(ctx):
 # command for testing
 @bot.command(name='debug', help='Debugging')
 async def debug(ctx):
-    game = black_jack.BlackJack()
+    game = BlackJack()
     add_p1 =  game.add_player("Grazl", 10)
     game.deal_cards()
     show_card1 = game.show_game()
@@ -86,8 +88,49 @@ async def pay(ctx):
 
 # command blackjack
 @bot.command(name='blackjack', help='Play a game of blackjack.')
-async def blackjack(ctx):
-    await ctx.send('Blackjack TBD')     # TODO add implementation of blackjack game
+async def blackjack(ctx, *, arg_str):
+    argv = arg_str.split(' ')
+    if (len(argv) > 2 or len(argv) < 1):
+        await ctx.send(f'Invalid number of arguments')
+    global BlackJack_Game
+    match (argv[0]):
+        case "init":
+            if (len(argv) != 1):
+                await ctx.send(f'With init you can\'t add another argument')
+            BlackJack_Game = BlackJack()
+            await ctx.send(f'{BlackJack_Game.game_init()}')
+        case "add":
+            
+            if (BlackJack_Game is None):
+                await ctx.send("Game is not initialized yet")
+            bet = 0
+            if (len(argv) == 2):
+                bet = int(argv[1])
+            await ctx.send(f'{BlackJack_Game.add_player(ctx.author.name, bet)}')
+        case "start":
+            BlackJack_Game.deal_cards()
+            await ctx.send(f'{BlackJack_Game.show_game()}')
+            
+        case "hit":
+            if (len(argv) != 1):
+                await ctx.send(f'With start you can\'t add another argument')
+            BlackJack_Game.player_hit(ctx.author.name)
+            if (BlackJack_Game.is_crupiers_turn()):
+                BlackJack_Game.crupiers_turn()
+                await ctx.send(f'{BlackJack_Game.show_game()}\n\n\n{BlackJack_Game.show_results()}')
+            await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
+        case "stand":
+            if (len(argv) != 1):
+                await ctx.send(f'With start you can\'t add another argument')
+            BlackJack_Game.player_stand(ctx.author.name)
+            if (BlackJack_Game.is_crupiers_turn()):
+                BlackJack_Game.crupiers_turn()
+                await ctx.send(f'{BlackJack_Game.show_game()}\n\n\n{BlackJack_Game.show_results()}')
+            await ctx.send(f'{BlackJack_Game.players[ctx.author.name].show_cards()}')
+        case _:
+            await ctx.send("Invalid command")
+
+        # TODO add implementation of blackjack game
 
 # command coinflip
 @bot.command(name='coinflip', help='Flip a coin.')
