@@ -12,6 +12,10 @@ class GameType(IntEnum):
     SLOTS = 4
 
 class GameState(IntEnum):
-    WAITING_FOR_PLAYER = 0
+    WAITING_FOR_PLAYERS = 0
     RUNNING = 1
     ENDED = 2
+
+class PlayerState(IntEnum):
+    PLAYING = 0
+    WAITING = 1
