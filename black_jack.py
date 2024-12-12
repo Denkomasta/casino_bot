@@ -231,6 +231,10 @@ class BlackJack:
     async def cmd_status(self, ctx: commands.Context, args: list[str]):
         """Handles the 'status' command."""
         await ctx.send("Command 'status' invoked.")
+    
+    async def cmd_exit(self, ctx: commands.Context, args: list[str]):
+        """Handles the 'exit' command."""
+        await ctx.send("Command 'status' invoked.")
 
     async def cmd_help(self, ctx: commands.Context, args: list[str]):
         """Handles the 'help' command."""
