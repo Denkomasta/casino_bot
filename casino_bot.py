@@ -87,7 +87,7 @@ async def pay(ctx):
     await ctx.send('Pay TBD')      # TODO add implementation of pay
 
 # command blackjack
-@bot.command(name='blackjack', help='Play a game of blackjack.')
+@bot.command(name='blackjack', help='Play a game of blackjack.', aliases=["bj"])
 async def blackjack(ctx, *, arg_str):
     argv = arg_str.split(' ')
     if (len(argv) > 2 or len(argv) < 1):
