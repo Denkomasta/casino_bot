@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from enums import E
 
+
 DEFEAT = 0
 VICTORY = 1
 DRAW = 2
@@ -68,12 +69,14 @@ class Card:
 
 class Player:
     name: str
+    id: int
     cards: list[Card]
     bet: int
     state: bool
     result: tuple[int, int]
-    def __init__(self, name: str, bet: int=0):
+    def __init__(self, id: int, name: str, bet: int=0):
         self.name = name
+        self.id = id
         self.bet = bet
         self.cards = []
         self.state = True
@@ -106,7 +109,7 @@ class Player:
 
 class BlackJack:
     deck: list[Card]
-    crupier: Player = Player("Dealer", 0)
+    crupier: Player = Player(0, "Dealer", 0)
     players: dict[str, Player]
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] #dict of str/functions
     is_playing: bool
@@ -164,7 +167,7 @@ class BlackJack:
         if (len(args) > 2):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be < 2")
             return
-        if (self.add_player(ctx.author.name) == E.INV_STATE):
+        if (self.add_player(ctx.author.id, ctx.author.name) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is already in the game!")
              return
         await ctx.send(f"Player {ctx.author.name} joined the game!")
@@ -184,10 +187,12 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
+        #self.collect_bets()
         self.deal_cards()
         await ctx.send(f"{self.show_game()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
+            #self.give_winnings() #not working
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
 
     async def cmd_hit(self, ctx: commands.Context, args: list[str]):
@@ -199,6 +204,7 @@ class BlackJack:
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
+            #self.give_winnings() #not working
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
             return
         if (can_play == E.INV_STATE):
@@ -215,6 +221,7 @@ class BlackJack:
             return
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
+            #self.give_winnings() #not workin
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
             return
         await ctx.send(f"{ctx.author.name} now stands")
@@ -252,11 +259,11 @@ class BlackJack:
         await ctx.send("\n".join(help))
 
     
-    def add_player(self, player_name: str, bet: int=0) -> E:
+    def add_player(self, player_id: int, player_name: str, bet: int=0) -> E:
         if (self.players.get(player_name) is not None):
             return E.INV_STATE
         
-        self.players[player_name] = Player(player_name, bet)
+        self.players[player_name] = Player(player_id, player_name, bet)
         return E.SUCCESS
 
     def remove_player(self, player_name: str) -> E:
@@ -357,7 +364,18 @@ class BlackJack:
                 show += f"{player.name}\n"
         return show
 
-
+    def collect_bets(self) -> None:
+        from casino_bot import add_player_balance
+        for player in self.players.values():
+            if (player.bet > 0):
+                add_player_balance(player.id, -player.bet)
+    
+    def give_winnings(self) -> None:
+        from casino_bot import add_player_balance
+        for player in self.players.values():
+            _, add = player.result
+            if (add > 0):
+                add_player_balance(player.id, add)
         
 
 
