@@ -2,6 +2,7 @@ from random import randrange
 from typing import Callable, Awaitable
 import discord
 from discord.ext import commands
+from enums import E
 
 DEFEAT = 0
 VICTORY = 1
@@ -163,7 +164,7 @@ class BlackJack:
         if (len(args) > 2):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be < 2")
             return
-        if (not self.add_player(ctx.author.name)):
+        if (self.add_player(ctx.author.name) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is already in the game!")
              return
         await ctx.send(f"Player {ctx.author.name} joined the game!")
@@ -173,7 +174,7 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        if (not self.remove_player(ctx.author.name)):
+        if (self.remove_player(ctx.author.name) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is not in the game!")
              return
         await ctx.send(f"Player {ctx.author.name} was removed from the game!")
@@ -194,13 +195,13 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        can_play: bool = self.player_hit(ctx.author.name)
+        can_play: E = self.player_hit(ctx.author.name)
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
             return
-        if (not can_play):
+        if (can_play == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} cannot hit anymore")
         
         
@@ -209,7 +210,7 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        if (not self.player_stand(ctx.author.name)):
+        if (self.player_stand(ctx.author.name) == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} already stands")
             return
         if (self.is_crupiers_turn()):
@@ -251,19 +252,19 @@ class BlackJack:
         await ctx.send("\n".join(help))
 
     
-    def add_player(self, player_name: str, bet: int=0) -> bool:
+    def add_player(self, player_name: str, bet: int=0) -> E:
         if (self.players.get(player_name) is not None):
-            return False
+            return E.INV_STATE
         
         self.players[player_name] = Player(player_name, bet)
-        return True
+        return E.SUCCESS
 
-    def remove_player(self, player_name: str) -> bool:
+    def remove_player(self, player_name: str) -> E:
         if (self.players.get(player_name) is None):
-            return False
+            return E.INV_STATE
         
         self.players.pop(player_name)
-        return True
+        return E.SUCCESS
 
     def show_game(self)-> str:
         show: str = ""
@@ -282,17 +283,17 @@ class BlackJack:
         self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
 
 
-    def player_hit(self, name:str) -> bool:
+    def player_hit(self, name:str) -> E:
         player: Player = self.players[name]
         if (not player.state):
-            return False
+            return E.INV_STATE
         card: Card = self.deck.pop(randrange(len(self.deck)))
         player.cards.append(card)
         if (player.count_cards() == 21):
             player.state = False
         if (player.count_cards() > 21):
             player.state = False
-        return True
+        return E.SUCCESS
     
     def is_crupiers_turn(self) -> bool:
         result: bool = True
@@ -300,12 +301,12 @@ class BlackJack:
             result = result and not player.state
         return result
     
-    def player_stand(self, name: str) -> bool:
+    def player_stand(self, name: str) -> E:
         player: Player = self.players[name]
         if (not player.state):
-            return False
+            return E.INV_STATE
         player.state = False
-        return True
+        return E.SUCCESS
     
     def crupiers_turn(self):
         for card in self.crupier.cards:
@@ -346,7 +347,7 @@ class BlackJack:
             player.result = (-1, -1)
             player.cards = []
 
-    def change_bet(self, name: str, bet: int):
+    def change_bet(self, name: str, bet: int) -> None:
         self.players[name].bet = bet
 
     def show_status(self) ->str:
