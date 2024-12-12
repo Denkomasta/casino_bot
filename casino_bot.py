@@ -25,7 +25,7 @@ def load_stats():   # returns dict
     try:
         with open("player_stats.json", "r") as f:
             return json.load(f)
-    except FileNotFoundError:
+    except Exception as _:
         return {}
 
 
@@ -37,16 +37,16 @@ def save_stats():
     except Exception as e:
         print(f"Error saving stats: {e}")    # TODO add log?
 
-bot.player_stats = load_stats() # Custom bot attribute
+bot.player_stats = load_stats()
 
 def get_player_balance(author_id: int) -> int:
-    return bot.player_stats[author_id]["balance"]
+    return bot.player_stats[str(author_id)]["balance"]
 
 def add_player_balance(author_id: int, value: int) -> None:
-    bot.player_stats[author_id]["balance"] += value
+    bot.player_stats[str(author_id)]["balance"] += value
 
 def get_player_name(author_id: int) -> str:
-    return bot.player_stats[author_id]["name"]
+    return bot.player_stats[str(author_id)]["name"]
 
 @bot.event
 async def on_ready():
