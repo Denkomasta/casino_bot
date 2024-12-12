@@ -147,10 +147,6 @@ class BlackJack:
         
         await ctx.send("Players who wants to participate write \"!blackjack add -bet-\" after all of you are ready write \"!blackjack start\"")
 
-    async def cmd_exit(self, ctx: commands.Context, args: list[str]):
-        """Handles the 'exit' command."""
-        await ctx.send("Command 'exit' invoked.")
-
     async def cmd_restart(self, ctx: commands.Context, args: list[str]):
         """Handles the 'restart' command."""
         if (len(args) != 1):
@@ -238,7 +234,17 @@ class BlackJack:
 
     async def cmd_help(self, ctx: commands.Context, args: list[str]):
         """Handles the 'help' command."""
-        await ctx.send("Command 'status' invoked.")
+        help: list[str] = [
+            "create - creates a new game",
+            "exit - destroys current game",
+            "join [number] - adds you to current game, with instead of number use size of your bet",
+            "start - starts the game",
+            "hit - get a card",
+            "stand - end your turn",
+            "bet [number] - changes your bet",
+            "restart - restarts the game, but players and bets will stay",
+        ]
+        await ctx.send("\n".join(help))
 
     
     def add_player(self, player_name: str, bet: int=0) -> bool:

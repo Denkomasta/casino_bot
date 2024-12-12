@@ -124,6 +124,9 @@ async def blackjack(ctx, *, arg_str):
         Games.pop(ctx.channel.id)
         await ctx.send(f'Game was exited')
         return
+    if (ctx.channel.id not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
+            return
     await Games[ctx.channel.id].cmd_run(ctx, argv)
 
         # TODO add implementation of blackjack game
