@@ -1,5 +1,5 @@
 from random import randrange
-from typing import Callable
+from typing import Callable, Awaitable
 import discord
 from discord.ext import commands
 
@@ -107,7 +107,7 @@ class BlackJack:
     deck: list[Card]
     crupier: Player = Player("Dealer", 0)
     players: dict[str, Player]
-    commands_dict: dict[str, Callable[[commands.Context, list[str]], None]] #dict of str/functions
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] #dict of str/functions
     is_playing: bool
 
     def __init__(self):
