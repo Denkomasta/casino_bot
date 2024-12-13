@@ -187,12 +187,12 @@ class BlackJack:
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        #self.collect_bets()
+        self.collect_bets()
         self.deal_cards()
         await ctx.send(f"{self.show_game()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
-            #self.give_winnings() #not working
+            self.give_winnings() #not working
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
 
     async def cmd_hit(self, ctx: commands.Context, args: list[str]):
@@ -204,7 +204,7 @@ class BlackJack:
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
-            #self.give_winnings() #not working
+            self.give_winnings() #not working
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
             return
         if (can_play == E.INV_STATE):
@@ -221,7 +221,7 @@ class BlackJack:
             return
         if (self.is_crupiers_turn()):
             self.crupiers_turn()
-            #self.give_winnings() #not workin
+            self.give_winnings() #not workin
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
             return
         await ctx.send(f"{ctx.author.name} now stands")

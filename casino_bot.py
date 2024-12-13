@@ -32,21 +32,22 @@ def load_stats():   # returns dict
 def save_stats():
     try:
         with open("player_stats.json", "w") as f:
-            json.dump(bot.player_stats, f, indent=4)
+            json.dump(player_stats, f, indent=4)
         print("Player stats saved successfully.")
     except Exception as e:
         print(f"Error saving stats: {e}")    # TODO add log?
 
-bot.player_stats = load_stats()
+player_stats = load_stats()
 
 def get_player_balance(author_id: int) -> int:
-    return bot.player_stats[str(author_id)]["balance"]
+    return player_stats[str(author_id)]["balance"]
 
 def add_player_balance(author_id: int, value: int) -> None:
-    bot.player_stats[str(author_id)]["balance"] += value
+    player_stats[str(author_id)]["balance"] += value
+    return
 
 def get_player_name(author_id: int) -> str:
-    return bot.player_stats[str(author_id)]["name"]
+    return player_stats[str(author_id)]["name"]
 
 @bot.event
 async def on_ready():
@@ -77,8 +78,8 @@ async def debug(ctx):
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
     a_id = str(ctx.author.id)
-    if a_id not in bot.player_stats.keys():
-        bot.player_stats[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
+    if a_id not in player_stats.keys():
+        player_stats[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
         await ctx.send(f'{ctx.author.global_name} is a new member of {BOTNAME}')
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
@@ -184,4 +185,5 @@ signal.signal(signal.SIGINT, signal_handler)
 async def start_bot():
     await bot.start(TOKEN)
 
-asyncio.run(start_bot())
+if __name__ == "__main__":
+    asyncio.run(start_bot())
