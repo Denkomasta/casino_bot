@@ -3,7 +3,7 @@ from typing import Callable, Awaitable
 import discord
 from discord.ext import commands
 from enums import E
-
+from database import Database
 
 DEFEAT = 0
 VICTORY = 1
@@ -113,12 +113,14 @@ class BlackJack:
     players: dict[str, Player]
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] #dict of str/functions
     is_playing: bool
+    data: Database
 
-    def __init__(self):
+    def __init__(self, data: Database):
         self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
         self.crupier.cards = []
         self.players = {}
         self.is_playing = False
+        self.data = data
         self.commands_dict = {
         "create": self.cmd_create,
         "exit": self.cmd_exit,
@@ -365,18 +367,16 @@ class BlackJack:
         return show
 
     def collect_bets(self) -> None:
-        from casino_bot import add_player_balance
         for player in self.players.values():
             print(f"bet = {player.bet}")
             if (player.bet > 0):
-                add_player_balance(player.id, -player.bet)
+                self.data.change_player_balance(player.id, -player.bet)
     
     def give_winnings(self) -> None:
-        from casino_bot import add_player_balance
         for player in self.players.values():
             _, add = player.result
             if (add > 0):
-                add_player_balance(player.id, add)
+                self.data.change_player_balance(player.id, add)
         
 
 

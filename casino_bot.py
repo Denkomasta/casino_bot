@@ -6,10 +6,11 @@ import json
 import asyncio
 import signal
 import sys
-
+from database import Database
 from black_jack import BlackJack, Card, Player
 
 Games: dict[int, BlackJack] = {}
+Data: Database = Database()
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -20,36 +21,6 @@ CHAIN_DELIM = ";"
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=CMD_PREFIX, case_insensitive=True, intents=intents)
-
-def load_stats():   # returns dict
-    try:
-        with open("player_stats.json", "r") as f:
-            return json.load(f)
-    except Exception as _:
-        return {}
-
-
-def save_stats():
-    try:
-        with open("player_stats.json", "w") as f:
-            json.dump(bot.player_stats, f, indent=4)
-        print("Player stats saved successfully.")
-    except Exception as e:
-        print(f"Error saving stats: {e}")    # TODO add log?
-
-bot.player_stats = load_stats()
-
-def get_player_balance(author_id: int) -> int:
-    print(f'get: {bot.player_stats[str(author_id)]["balance"]}')
-    return bot.player_stats[str(author_id)]["balance"]
-
-def add_player_balance(author_id: int, value: int) -> None:     # TODO get and add are functioning weirdly when someone changes value
-    print(f'add: {bot.player_stats[str(author_id)]["balance"]}')
-    bot.player_stats[str(author_id)]["balance"] = bot.player_stats[str(author_id)]["balance"] + value
-    print(f'change: {bot.player_stats[str(author_id)]["balance"]}')
-
-def get_player_name(author_id: int) -> str:
-    return bot.player_stats[str(author_id)]["name"]
 
 @bot.event
 async def on_ready():
@@ -80,8 +51,8 @@ async def debug(ctx):
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
     a_id = str(ctx.author.id)
-    if a_id not in bot.player_stats.keys():
-        bot.player_stats[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
+    if a_id not in Data.data.keys():
+        Data.data[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
         await ctx.send(f'{ctx.author.global_name} is a new member of {BOTNAME}')
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
@@ -94,7 +65,7 @@ async def info(ctx):
 # command balance
 @bot.command(name='balance', help='Check your casino balance.')
 async def balance(ctx):
-    await ctx.send(f'{get_player_name(ctx.author.id)} has casino balance: {get_player_balance(ctx.author.id)}')
+    await ctx.send(f'{Data.get_player_name(ctx.author.id)} has casino balance: {Data.get_player_balance(ctx.author.id)}')
 
 # command leaderboard
 @bot.command(name='leaderboard', help='Check how wealthy are you.')
@@ -117,7 +88,7 @@ async def blackjack(ctx, *, arg_str):
         if (ctx.channel.id in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[ctx.channel.id] = BlackJack()
+        Games[ctx.channel.id] = BlackJack(Data)
         await ctx.send(f'Game was created, join the game using \'join -bet-\' and start the game using \'start\'')
         return
     if (argv[0] == "exit"):
@@ -173,12 +144,12 @@ async def on_message(message):
 # saving data about players to json file - TODO doesnt work with signals
 @bot.event
 async def on_close():
-    save_stats()
+    Data.save_stats()
     print("Bot disconnected, stats saved.")
 
 def signal_handler(signal, frame):
     print("Gracefully shutting down...")
-    save_stats()
+    Data.save_stats()
     asyncio.create_task(bot.close())
     sys.exit(0)
 
