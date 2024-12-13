@@ -3,6 +3,9 @@ from enum import IntEnum
 class E(IntEnum):
     SUCCESS = 0
     INV_STATE = -1
+    INSUFFICIENT_FUNDS = -2
+    OUT_OF_RANGE = -3
+    INV_PLAYER = -4
 
 class GameType(IntEnum):
     BLACKJACK = 0

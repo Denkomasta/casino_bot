@@ -2,12 +2,7 @@ from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
 from discord.ext import commands
-
-SUCCESS = 0
-EINVALID_PLAYER = -1
-ENUMBER_OUT_OF_RANGE = -2
-EINSUFFICIENT_FUNDS = -3
-EREADY = -4
+from enums import E
 
 
 class RNGPlayer:
@@ -33,64 +28,74 @@ class RNGGame(ABC):
     highest: int
     bets: dict[int, list[Bet]]
     players: dict[str, RNGPlayer]
-    players_not_ready: int
     last_roll: int | None
     def __init__(self, lowest: int, highest: int):
         self.lowest = lowest
         self.highest = highest
-        self.bets = dict()
+        self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
         self.players = dict()
         self.last_roll = None
 
     def add_player(self, name: str, balance: int=0) -> int:
-        if self.players.get(name, None) is None:
-            return EINVALID_PLAYER
+        if self.players.get(name, None) is not None:
+            return E.INV_PLAYER
 
         self.players[name] = RNGPlayer(name, balance)
-        self.players_not_ready += 1
-        return SUCCESS
+        return E.SUCCESS
 
     def remove_player(self, name: str) -> int:
         if self.players.get(name, None) is None:
-            return EINVALID_PLAYER
+            return E.INV_PLAYER
         
         self.players.pop(name)
-        return SUCCESS
+        return E.SUCCESS
     
     def place_bet(self, name: str, bet: int, number: int, odd: int) -> int:
         if number < self.lowest or number > self.highest:
-            return ENUMBER_OUT_OF_RANGE
+            return E.OUT_OF_RANGE
         if bet > self.players[name].balance:
-            return EINSUFFICIENT_FUNDS
+            return E.INSUFFICIENT_FUNDS
         
         new_bet = Bet(self.players[name], bet, odd)
         self.bets[number].append(new_bet)
-        return SUCCESS
+        new_bet.player.balance -= bet
+        return E.SUCCESS
     
     def ready_up(self, name: str) -> int:
         if self.players.get(name, None) is None:
-            return EINVALID_PLAYER
+            return E.INV_PLAYER
         if self.players[name].ready:
-            return EREADY
+            return E.INV_STATE
 
         self.players[name].ready = True
-        self.players_not_ready -= 1
-        return SUCCESS
+        return E.SUCCESS
+
+    def check_ready(self) -> bool:
+        for player in self.players.values():
+            if not player.ready:
+                return False
+        return True
     
     def roll(self) -> int:
-        if self.players_not_ready > 0:
-            return EREADY
-        result: int = randrange(self.lowest, self.highest)
+        if not self.check_ready():
+            return E.INV_STATE
+        result: int = randrange(self.lowest, self.highest + 1)
         if (result in self.bets.keys()):
             for bet in self.bets[result]:
                 bet.player.balance += bet.bet * bet.odd
         for player in self.players.values():
             player.ready = False
-            self.players_not_ready += 1
-        self.bets = dict()
+        self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
         self.last_roll = result
-        return SUCCESS
-        
+        return E.SUCCESS
+
+class Coinflip(RNGGame):
+    def __init__(self):
+        super().__init__(1, 2)
+
+class RollTheDice(RNGGame):
+    def __init__(self):
+        super().__init__(1, 6)
 
         
         
