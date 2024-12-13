@@ -6,6 +6,7 @@ class E(IntEnum):
     INSUFFICIENT_FUNDS = -2
     OUT_OF_RANGE = -3
     INV_PLAYER = -4
+    INV_BET = -5
 
 class GameType(IntEnum):
     BLACKJACK = 0
@@ -21,4 +22,6 @@ class GameState(IntEnum):
 
 class PlayerState(IntEnum):
     PLAYING = 0
-    WAITING = 1
+    READY = 1
+    NOT_READY = 2
+    FINISHED = 3

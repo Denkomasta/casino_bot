@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enums import GameType, PlayerState, GameState
+from database import Database
 
 class Card:
     value: int
@@ -20,11 +21,13 @@ class Game(ABC):
     type: GameType
     players: dict[str, Player]
     state: GameState
+    data: Database
 
-    def __init__(self, type: GameType):
+    def __init__(self, data: Database, type: GameType):
         self.players = {}
         self.state = GameState.WAITING_FOR_PLAYERS
         self.type = type
+        self.data = data
 
 class CardGame(Game):
     deck: list[Card]
