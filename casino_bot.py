@@ -32,22 +32,24 @@ def load_stats():   # returns dict
 def save_stats():
     try:
         with open("player_stats.json", "w") as f:
-            json.dump(player_stats, f, indent=4)
+            json.dump(bot.player_stats, f, indent=4)
         print("Player stats saved successfully.")
     except Exception as e:
         print(f"Error saving stats: {e}")    # TODO add log?
 
-player_stats = load_stats()
+bot.player_stats = load_stats()
 
 def get_player_balance(author_id: int) -> int:
-    return player_stats[str(author_id)]["balance"]
+    print(f'get: {bot.player_stats[str(author_id)]["balance"]}')
+    return bot.player_stats[str(author_id)]["balance"]
 
-def add_player_balance(author_id: int, value: int) -> None:
-    player_stats[str(author_id)]["balance"] += value
-    return
+def add_player_balance(author_id: int, value: int) -> None:     # TODO get and add are functioning weirdly when someone changes value
+    print(f'add: {bot.player_stats[str(author_id)]["balance"]}')
+    bot.player_stats[str(author_id)]["balance"] = bot.player_stats[str(author_id)]["balance"] + value
+    print(f'change: {bot.player_stats[str(author_id)]["balance"]}')
 
 def get_player_name(author_id: int) -> str:
-    return player_stats[str(author_id)]["name"]
+    return bot.player_stats[str(author_id)]["name"]
 
 @bot.event
 async def on_ready():
@@ -78,8 +80,8 @@ async def debug(ctx):
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
     a_id = str(ctx.author.id)
-    if a_id not in player_stats.keys():
-        player_stats[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
+    if a_id not in bot.player_stats.keys():
+        bot.player_stats[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
         await ctx.send(f'{ctx.author.global_name} is a new member of {BOTNAME}')
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')

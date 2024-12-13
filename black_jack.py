@@ -367,6 +367,7 @@ class BlackJack:
     def collect_bets(self) -> None:
         from casino_bot import add_player_balance
         for player in self.players.values():
+            print(f"bet = {player.bet}")
             if (player.bet > 0):
                 add_player_balance(player.id, -player.bet)
     
