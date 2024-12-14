@@ -109,7 +109,7 @@ class Player:
 
 class BlackJack:
     deck: list[Card]
-    crupier: Player = Player(0, "Dealer", 0)
+    crupier: Player
     players: dict[str, Player]
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] #dict of str/functions
     is_playing: bool
@@ -118,7 +118,7 @@ class BlackJack:
 
     def __init__(self, data: Database):
         self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
-        self.crupier.cards = []
+        self.crupier = Player(0, "Dealer", 0)
         self.players = {}
         self.is_playing = False
         self.data = data
