@@ -172,6 +172,7 @@ class BlackJack:
                 return
         if (self.add_player(ctx.author.id, ctx.author.name, bet) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is already in the game!")
+             return
         await ctx.send(f"Player {ctx.author.name} joined the game! {('Your bet is set to 0, use !bj bet [number] to change it.' if bet == 0 else f' Bet set to {bet}.')}")
 
     async def cmd_leave(self, ctx: commands.Context, args: list[str]):
