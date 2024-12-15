@@ -109,7 +109,7 @@ class Player:
 
 class BlackJack:
     deck: list[Card]
-    crupier: Player
+    dealer: Player
     players: dict[str, Player]
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] #dict of str/functions
     is_playing: bool
@@ -117,8 +117,8 @@ class BlackJack:
     data: Database
 
     def __init__(self, data: Database):
-        self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
-        self.crupier = Player(0, "Dealer", 0)
+        self.deck = self.get_new_deck()
+        self.dealer = Player(0, "Dealer", 0)
         self.players = {}
         self.is_playing = False
         self.data = data
@@ -153,7 +153,7 @@ class BlackJack:
             await ctx.send(f"Game is running right now, wait until is ends or use 'exit'")
             return
         self.game_restart()
-        await ctx.send("Game was succesfully reseted, you can change your bet using \"!blackjack bet -bet-\" or leave the game using \"!blackjack leave\"")
+        await ctx.send("Game was succesfully reseted, use \'join [bet]\' to enter the game")
 
     async def cmd_join(self, ctx: commands.Context, args: list[str]):
         """Handles the 'join' command."""
@@ -195,11 +195,12 @@ class BlackJack:
             return
         self.game_start()
         await ctx.send(f"{self.show_game()}")
-        if (self.is_crupiers_turn()):
-            self.crupiers_turn()
-            self.give_winnings()
-            self.state = GameState.ENDED
+        self.check_blackjack()
+        if (self.is_everyone_finished()):
+            self.game_finish()
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
+            self.round_restart()
+            return
 
     async def cmd_ready(self, ctx: commands.Context, args: list[str]):
         """Handles the 'ready' command."""    
@@ -230,11 +231,10 @@ class BlackJack:
             return
         can_play: E = self.player_hit(ctx.author.name)
         await ctx.send(f"{self.players[ctx.author.name].show_cards()}")
-        if (self.is_crupiers_turn()):
-            self.crupiers_turn()
-            self.give_winnings()
-            self.state = GameState.ENDED
+        if (self.is_everyone_finished()):
+            self.game_finish()
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
+            self.round_restart()
             return
         if (can_play == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} cannot hit anymore")
@@ -248,11 +248,10 @@ class BlackJack:
         if (self.player_stand(ctx.author.name) == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} already stands")
             return
-        if (self.is_crupiers_turn()):
-            self.crupiers_turn()
-            self.give_winnings()
-            self.state = GameState.ENDED
+        if (self.is_everyone_finished()):
+            self.game_finish()
             await ctx.send(f"{self.show_game()}\n{self.show_results()}")
+            self.round_restart()
             return
         await ctx.send(f"{ctx.author.name} now stands")
         
@@ -320,7 +319,7 @@ class BlackJack:
 
     def show_game(self)-> str:
         show: str = ""
-        show += f"{self.crupier.show_cards()}\n"
+        show += f"{self.dealer.show_cards()}\n"
         for player in self.players.values():
             show += f"{player.show_cards()}\n"
         return show
@@ -328,11 +327,11 @@ class BlackJack:
     def deal_cards(self) -> None:
         hidden_card: Card = self.deck.pop(randrange(len(self.deck)))
         hidden_card.showable = False
-        self.crupier.cards.append(hidden_card)
+        self.dealer.cards.append(hidden_card)
         for _ in range(2):
             for player in self.players.values():
                 player.cards.append(self.deck.pop(randrange(len(self.deck))))
-        self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
+        self.dealer.cards.append(self.deck.pop(randrange(len(self.deck))))
 
 
     def player_hit(self, name:str) -> E:
@@ -347,7 +346,7 @@ class BlackJack:
             player.state = PlayerState.FINISHED
         return E.SUCCESS
     
-    def is_crupiers_turn(self) -> bool:
+    def is_everyone_finished(self) -> bool:
         result: bool = True
         for player in self.players.values():
             result = result and player.state == PlayerState.FINISHED
@@ -360,15 +359,14 @@ class BlackJack:
         player.state = PlayerState.FINISHED
         return E.SUCCESS
     
-    def crupiers_turn(self):
-        for card in self.crupier.cards:
+    def dealers_turn(self):
+        for card in self.dealer.cards:
             card.showable = True
-        while (self.crupier.count_cards() < 17):
-            self.crupier.cards.append(self.deck.pop(randrange(len(self.deck))))
-        self.evaluate()
+        while (self.dealer.count_cards() < 17):
+            self.dealer.cards.append(self.deck.pop(randrange(len(self.deck))))
 
     def evaluate(self) -> None:
-        crupiers_count: int = self.crupier.count_cards()
+        crupiers_count: int = self.dealer.count_cards()
         for player in self.players.values():
             player_count: int = player.count_cards()
             if (player_count > 21):
@@ -398,9 +396,9 @@ class BlackJack:
                     show += f"{player.name}: Draw. Your bet of {player.bet} has been returned.\n"
         return show
     
-    def game_restart(self):
-        self.deck = [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
-        self.crupier.cards = []
+    def round_restart(self):
+        self.deck = self.get_new_deck()
+        self.dealer.cards = []
         self.state = GameState.WAITING_FOR_PLAYERS
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
@@ -441,7 +439,25 @@ class BlackJack:
         for player in self.players.values():
             player.state = PlayerState.PLAYING
     
+    def game_finish(self):
+        self.dealers_turn()
+        self.evaluate()
+        self.give_winnings()
+        self.state = GameState.ENDED
 
+    def game_restart(self):
+        self.deck = self.get_new_deck()
+        self.dealer.cards = []
+        self.players = {}
+        self.state = GameState.WAITING_FOR_PLAYERS
+
+    def get_new_deck(self) -> list[Card]:
+        return [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
+
+    def check_blackjack(self) -> None:
+        for player in self.players.values():
+            if (player.count_cards() == 21):
+                player.state = PlayerState.FINISHED
 
 
 
