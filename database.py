@@ -1,4 +1,5 @@
 import json
+import discord
 from typing import Any
 
 class Database:
@@ -30,3 +31,13 @@ class Database:
 
     def get_player_name(self, author_id: int) -> str:
         return self.data[str(author_id)]["name"]
+    
+    def add_player(self, ctx) -> bool:
+        a_id = str(ctx.author.id)
+        if a_id not in self.data.keys():
+            self.data[a_id] = {"name": ctx.author.global_name, "balance": 100}     # TODO What do we want to save?
+            return True
+        return False
+    
+    def is_player(self, author_id: int) -> bool:
+        return (str(author_id) in self.data.keys())

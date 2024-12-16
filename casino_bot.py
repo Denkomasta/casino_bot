@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 import os
-import json
 import asyncio
 import signal
 import sys
@@ -50,9 +49,7 @@ async def debug(ctx):
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
-    a_id = str(ctx.author.id)
-    if a_id not in Data.data.keys():
-        Data.data[a_id] = {"name": ctx.author.global_name, "balance": 10}     # TODO What do we want to save?
+    if Data.add_player(ctx):
         await ctx.send(f'{ctx.author.global_name} is a new member of {BOTNAME}')
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
@@ -73,9 +70,48 @@ async def leaderboard(ctx):
     await ctx.send('Leaderboard TBD')      # TODO add implementation of leaderboard
 
 # command pay
-@bot.command(name='pay', help='Pay another user money.')
-async def pay(ctx):
-    await ctx.send('Pay TBD')      # TODO add implementation of pay
+@bot.command(name='pay', help='Pay another user with !pay @user amount')
+async def pay(ctx, mention: str = None, amount_s: str = None):
+    sender = ctx.author
+    if mention is None or amount_s is None:
+        await ctx.send(f'{sender.mention}, please specify both a user and an amount. Example: `!pay @user 100`')
+        return
+
+    if any(role in ctx.message.content for role in ['@everyone', '@here']):
+        await ctx.send(f'{sender.mention}, you cannot pay everyone.')
+        return
+
+    try:
+        amount = int(amount_s)
+    except ValueError:
+        await ctx.send(f'{sender.mention}, the amount must be a valid integer.')
+        return
+
+    receiver = mention
+    receiver_id = int(mention.strip('<>@!'))
+
+    if not Data.is_player(receiver_id):
+        await ctx.send(f'{sender.mention}, you cannot send money to {receiver} as he is not a DisCas member.')
+        return
+
+    if amount <= 0:
+        await ctx.send(f'{sender.mention}, the amount must be positive.')
+        return
+
+    if sender.id == receiver_id:
+        await ctx.send(f'{sender.mention}, you cannot pay yourself.')
+        return
+
+    if Data.get_player_balance(sender.id) < amount:
+        await ctx.send(f'{sender.mention}, you do not have enough money to pay {amount} to {receiver}.')
+        return
+
+    #critical section
+    Data.change_player_balance(sender.id, -amount)
+    Data.change_player_balance(receiver_id, amount)
+    #critical section
+
+    await ctx.send(f'{sender.mention} paid {receiver} {amount} coins!')
 
 # command blackjack
 @bot.command(name='blackjack', help='Play a game of blackjack.', aliases=["bj"])
