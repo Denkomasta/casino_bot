@@ -22,10 +22,12 @@ class Bet:
     player: RNGPlayer
     bet: int
     odd: int
+    possible_winning: int
     def __init__(self, player: RNGPlayer, bet: int, odd: int):
         self.player = player
         self.bet = bet
         self.odd = odd
+        self.possible_winning = self.bet * self.odd
 
 class RNGGame(ABC):
     name: str
@@ -128,6 +130,18 @@ class RNGGame(ABC):
             return
         await ctx.send(f"Player {ctx.author.display_name} needs more time to think and is now not ready")
 
+    async def command_roll(self, ctx: commands.Context, argv: list[str]):
+        if not self.check_ready():
+            await ctx.send(f"All players must be ready in order to roll!")
+            return
+        winning_bets: list[Bet] = self.roll()
+        await ctx.send(f"The winning number is: {self.last_roll}! �")
+        await ctx.send(self.build_winners_message(winning_bets))
+        if self.give_winnings(winning_bets) == E.INV_PLAYER:
+            await ctx.send(f"One or more players could not collect their winning because they left the game :(")
+        self.restart_game()
+        await ctx.send(f"The game has been restarted, bet and try your luck again!")
+
     def add_player(self, player_id: int, name: str, balance: int = 1) -> E:
         if self.players.get(name, None) is not None:
             return E.INV_PLAYER
@@ -183,18 +197,33 @@ class RNGGame(ABC):
                 return False
         return True
     
-    def roll(self) -> E:
-        if not self.check_ready():
-            return E.INV_STATE
-        result: int = randrange(self.lowest, self.highest + 1)
-        if (result in self.bets.keys()):
-            for bet in self.bets[result]:
-                bet.player.balance += bet.bet * bet.odd
+    def roll(self) -> tuple[int, list[Bet]]:
+        winning_number: int = randrange(self.lowest, self.highest + 1)
+        self.last_roll = winning_number
+        return self.bets[winning_number]
+
+    def give_winnings(self, winning_bets: list[Bet]) -> E:
+        retval: E = E.SUCCESS
+        for bet in winning_bets:
+            if self.players.get(bet.player.player_id, None) is None:
+                retval = E.INV_PLAYER
+                continue
+            bet.player.balance += bet.possible_winning
+        return retval
+    
+    def build_winners_message(self, winning_bets: list[Bet]) -> str:
+        if len(winning_bets) == 0:
+            return "No winners this round!"
+        message = f"The winners are:\n{winning_bets[0].player.name} with a win of {winning_bets[0].possible_winning}"
+        for i in range(1, len(winning_bets)):
+            message += f"\n{winning_bets[i].player.name} with a win of {winning_bets[i].possible_winning}"
+        message += "\nCongratulations!"
+        return message
+
+    def restart_game(self):
+        self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
         for player in self.players.values():
             player.ready = False
-        self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
-        self.last_roll = result
-        return E.SUCCESS
 
 class Coinflip(RNGGame):
     def __init__(self):
