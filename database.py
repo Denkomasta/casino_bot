@@ -26,7 +26,7 @@ class Database:
     def get_player_balance(self, author_id: int) -> int:
         return self.data[str(author_id)]["balance"]
 
-    def change_player_balance(self, author_id: int, value: int) -> None:     # TODO get and add are functioning weirdly when someone changes value
+    def change_player_balance(self, author_id: int, value: int) -> None:
         self.data[str(author_id)]["balance"] = self.data[str(author_id)]["balance"] + value
 
     def get_player_name(self, author_id: int) -> str:
@@ -41,3 +41,8 @@ class Database:
     
     def is_player(self, author_id: int) -> bool:
         return (str(author_id) in self.data.keys())
+    
+    def delete_player(self, ctx) -> None:
+        a_id = str(ctx.author.id)
+        if a_id in self.data.keys():
+            self.data.pop(a_id)

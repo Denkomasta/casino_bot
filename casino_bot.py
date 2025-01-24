@@ -54,6 +54,16 @@ async def subscribe(ctx):
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
 
+# command unsubsribe
+@bot.command(name='unsubscribe', help='Delete your casino account', aliases=["delete", "leave"])
+async def subscribe(ctx):
+    curr_balance = Data.get_player_balance(ctx.author.id)
+    if curr_balance < 0:
+        await ctx.send(f'{ctx.author.global_name}, you cannot delete your account, because you are in debt ({curr_balance} coins)!')
+        return
+    Data.delete_player(ctx)
+    await ctx.send(f'{ctx.author.global_name}\'s account was deleted.')
+
 # command info
 @bot.command(name='info', help=f'Information about {BOTNAME}!')
 async def info(ctx):
@@ -114,8 +124,24 @@ async def pay(ctx, mention: str = None, amount_s: str = None):
     await ctx.send(f'{sender.mention} paid {receiver} {amount} coins!')
 
 # command blackjack
-@bot.command(name='blackjack', help='Play a game of blackjack.', aliases=["bj"])
+@bot.command(name='blackjack', aliases=["bj"])
 async def blackjack(ctx, *, arg_str):
+    """
+    Play a game of blackjack!
+
+    bj commands:
+    * bj create - creates a new game of blackjack
+    * bj join - joins existing game
+    * bj bet [amount]
+    * bj ready - you are ready for your game
+    * bj unready
+    * bj start - starts blackjack game
+    * bj hit
+    * bj stand
+    * bj status
+    * bj exit
+    """
+
     argv = arg_str.split(' ')
     if (len(argv) > 2 or len(argv) < 1):
         await ctx.send(f'Invalid number of arguments')
@@ -166,7 +192,11 @@ async def on_message(message):
     if message.author == bot.user or not message.content.startswith(CMD_PREFIX):
         return
 
-    # TODO notsubscriber handling
+    # nonsubscriber handling
+    if not Data.is_player(message.author.id):
+        if not (message.content.startswith(f"{CMD_PREFIX}subscribe") or message.content.startswith(f"{CMD_PREFIX}help") or message.content.startswith(f"{CMD_PREFIX}hello")):
+            await message.channel.send(f'{message.author.mention}, you need to subscribe to be able to use {BOTNAME}, use {CMD_PREFIX}help if you are lost.')
+            return
 
     # Command chaining
     cmds = message.content.split(CHAIN_DELIM)
