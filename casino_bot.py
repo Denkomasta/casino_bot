@@ -207,7 +207,6 @@ async def on_message(message):
         await bot.process_commands(message)
 
 
-# saving data about players to json file - TODO doesnt work with signals
 @bot.event
 async def on_close():
     Data.save_stats()
@@ -220,6 +219,7 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 async def start_bot():
     await bot.start(TOKEN)
