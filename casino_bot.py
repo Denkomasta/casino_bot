@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from cmd_handler import BlackJackCmdHandler
 import os
 import asyncio
 import signal
@@ -163,7 +164,7 @@ async def blackjack(ctx, *, arg_str):
     if (ctx.channel.id not in Games.keys()):
             await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
             return
-    await Games[ctx.channel.id].cmd_run(ctx, argv)
+    await BlackJackCmdHandler.cmd_run(Games[ctx.channel.id], ctx, argv)
 
         # TODO add implementation of blackjack game
 

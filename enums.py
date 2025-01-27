@@ -25,3 +25,15 @@ class PlayerState(IntEnum):
     READY = 1
     NOT_READY = 2
     FINISHED = 3
+
+class CardSuits(IntEnum):
+    HEARTS = 0
+    DIAMONDS = 1
+    CLUBS = 2
+    SPADES = 3
+
+class PlayerResult:
+    DEFEAT = 0
+    VICTORY = 1
+    DRAW = 2
+    UNDEFINED = 3

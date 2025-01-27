@@ -49,7 +49,7 @@ class BlackJackCmdHandler(CommandHandler):
             except Exception as _:
                 await ctx.send(f"Argument [bet] has to be number, try again")
                 return
-        if (game.add_player(ctx.author.id, ctx.author.name, bet) == E.INV_STATE):
+        if (game.add_player(ctx.author, bet) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is already in the game!")
              return
         await ctx.send(f"Player {ctx.author.name} joined the game! {('Your bet is set to 0, use !bj bet [number] to change it.' if bet == 0 else f' Bet set to {bet}.')}")
@@ -60,7 +60,7 @@ class BlackJackCmdHandler(CommandHandler):
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        if (game.remove_player(ctx.author.name) == E.INV_STATE):
+        if (game.remove_player(ctx.author) == E.INV_STATE):
              await ctx.send(f"Player {ctx.author.name} is not in the game!")
              return
         await ctx.send(f"Player {ctx.author.name} was removed from the game!")
@@ -92,7 +92,7 @@ class BlackJackCmdHandler(CommandHandler):
         if (game.state == GameState.RUNNING):
             await ctx.send(f"Game is already running")
             return
-        game.players[ctx.author.name].state = PlayerState.READY
+        game.players[ctx.author.id].state = PlayerState.READY
         await ctx.send(f"{ctx.author.name} is READY")
     
     @staticmethod
@@ -104,7 +104,7 @@ class BlackJackCmdHandler(CommandHandler):
         if (game.state == GameState.RUNNING):
             await ctx.send(f"Game is already running")
             return
-        game.players[ctx.author.name].state = PlayerState.NOT_READY
+        game.players[ctx.author.id].state = PlayerState.NOT_READY
         await ctx.send(f"{ctx.author.name} is UNREADY")
 
     @staticmethod
@@ -113,8 +113,8 @@ class BlackJackCmdHandler(CommandHandler):
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        can_play: E = game.player_hit(ctx.author.name)
-        await ctx.send(f"{game.players[ctx.author.name].show_cards()}")
+        can_play: E = game.player_hit(ctx.author)
+        await ctx.send(f"{game.players[ctx.author.id].show_player_header()}\n{game.players[ctx.author.id].show_cards()}")
         if (game.is_everyone_finished()):
             game.game_finish()
             await ctx.send(f"{game.show_game()}\n{game.show_results()}")
@@ -129,7 +129,7 @@ class BlackJackCmdHandler(CommandHandler):
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
-        if (game.player_stand(ctx.author.name) == E.INV_STATE):
+        if (game.player_stand(ctx.author) == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} already stands")
             return
         if (game.is_everyone_finished()):
@@ -150,7 +150,7 @@ class BlackJackCmdHandler(CommandHandler):
         except Exception as _:
             await ctx.send(f"Argument [bet] has to be number, try again")
             return
-        game.change_bet(ctx.author.name, bet)
+        game.change_bet(ctx.author, bet)
         await ctx.send(f"{ctx.author.name}'s bet changed to {bet}")
 
     @staticmethod
