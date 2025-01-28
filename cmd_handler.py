@@ -75,11 +75,11 @@ class BlackJackCmdHandler(CommandHandler):
             await ctx.send(f"Waiting for players:\n{game.show_players_by_state(PlayerState.NOT_READY)}")
             return
         game.game_start()
-        await ctx.send(f"{game.show_game()}")
+        await ctx.send(f"```\n{game.show_game()}\n```")
         game.check_blackjack()
         if (game.is_everyone_finished()):
             game.game_finish()
-            await ctx.send(f"{game.show_game()}\n{game.show_results()}")
+            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
             game.round_restart()
             return
 
@@ -114,10 +114,10 @@ class BlackJackCmdHandler(CommandHandler):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
         can_play: E = game.player_hit(ctx.author)
-        await ctx.send(f"{game.players[ctx.author.id].show_player_header()}\n{game.players[ctx.author.id].show_cards()}")
+        await ctx.send(f"```{game.players[ctx.author.id].show_player()}```")
         if (game.is_everyone_finished()):
             game.game_finish()
-            await ctx.send(f"{game.show_game()}\n{game.show_results()}")
+            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
             game.round_restart()
             return
         if (can_play == E.INV_STATE):
@@ -134,7 +134,7 @@ class BlackJackCmdHandler(CommandHandler):
             return
         if (game.is_everyone_finished()):
             game.game_finish()
-            await ctx.send(f"{game.show_game()}\n{game.show_results()}")
+            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
             game.round_restart()
             return
         await ctx.send(f"{ctx.author.name} now stands")
@@ -161,13 +161,13 @@ class BlackJackCmdHandler(CommandHandler):
             return
         match (game.state):
             case GameState.WAITING_FOR_PLAYERS:
-                await ctx.send(f"GAME IS WAITING TO START:\n\nPlayer that are not ready:\n{game.show_players_by_state(PlayerState.NOT_READY)}")
+                await ctx.send(f"```GAME IS WAITING TO START:\n\nPlayer that are not ready:\n{game.show_players_by_state(PlayerState.NOT_READY)}```")
                 return
             case GameState.RUNNING:
-                await ctx.send(f"GAME IS RUNNING:\n\nTable:\n{game.show_game()}\n\nStill active players:\n{game.show_players_by_state(PlayerState.PLAYING)}")
+                await ctx.send(f"```GAME IS RUNNING:\n\nTable:\n{game.show_game()}\n\nStill active players:\n{game.show_players_by_state(PlayerState.PLAYING)}```")
                 return
             case GameState.ENDED:
-                await ctx.send(f"GAME ENDED:\n\nResults:\n{game.show_results()}")
+                await ctx.send(f"```GAME ENDED:\n\nResults:\n{game.show_results()}```")
                 return
         await ctx.send("Command 'status' invoked.")
 

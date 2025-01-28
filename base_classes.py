@@ -1,56 +1,25 @@
 from abc import ABC, abstractmethod
-from enums import GameType, PlayerState, GameState, PlayerResult, E
+from enums import GameType, PlayerState, GameState, PlayerResult, E, CardSuits
 from database import Database
 import discord
+from ascii_obj import Ascii
 
 class Card:
     value: int
-    suit: int
+    suit: CardSuits
     showable: bool
-    ascii: list[list[str]]
 
-    def __init__(self, suit: int, value: int, show: bool= True):
+    def __init__(self, suit: CardSuits, value: int, show: bool= True):
         self.suit = suit
         self.value = value
         self.showable = show
-        self.ascii = [
-            ["┌","─","─","─","─","─","┐"],
-            ["│","V"," "," "," "," ","│"],
-            ["│"," "," ","S"," "," ","│"],
-            ["│"," "," "," "," ","V","│"],
-            ["└","─","─","─","─","─","┘"]
-        ]
     
-    def fill_ascii(self) -> None:
-        suit = self.suit
-        value = self.value
-
-        if (not self.showable):
-            suit = -1
-            value = -1
-
-        suits = {0: "♥", 1: "♦", 2: "♣", 3: "♠", -1: "?"}
-        values = {1: "A", 10: "1", 11: "J", 12: "Q", 13: "K", -1: "?"}
-
-        if (value == 10):
-            self.ascii[1][1] = "1"
-            self.ascii[1][2] = "0"
-            self.ascii[3][4] = "1"
-            self.ascii[3][5] = "0"
-            self.ascii[2][3] = suits.get(suit, "?")
-            return
-
-        self.ascii[1][1] = values.get(value, str(value))
-        self.ascii[2][3] = suits.get(suit, "?")
-        self.ascii[3][5] = values.get(value, str(value))
-        
-
     def show_card(self) ->str:
-        self.fill_ascii()
+        ascii_card = Ascii.get_card(self.suit, self.value, self.showable)
         show: str = ""
-        for lst in self.ascii:
+        for line in ascii_card:
             show += "`"
-            show += "".join(lst)
+            show += "".join(line)
             show += "`"
             show += "\n"
         return show
@@ -84,13 +53,11 @@ class CardPlayer(Player):
 
     def show_cards(self) -> str:
         show = ""
-        for card in self.cards:
-            card.fill_ascii()
         for index in range(5):
-            show += "`"
+            #show += "`"
             for card in self.cards:
-                show += "".join(card.ascii[index])
-            show += "`"
+                show += "".join(Ascii.get_card(card.suit, card.value, card.showable)[index])
+            #show += "`"
             show += "\n"
         return show
 
@@ -150,5 +117,5 @@ class CardGame(Game):
         self.deck = self.get_new_deck()
 
     def get_new_deck(self) -> list[Card]:
-        return [Card(suit, value, True) for suit in range(4) for value in range(1, 14)]
+        return [Card(suit, value, True) for suit in CardSuits if suit != CardSuits.UNSHOWABLE for value in range(1, 14)]
 

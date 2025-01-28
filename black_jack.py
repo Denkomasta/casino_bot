@@ -23,7 +23,10 @@ class BlackJackPlayer(CardPlayer):
         return count_a11
     
     def show_player_header(self):
-        return f"{self.player_info.name} |{self.count_cards()}|\n"
+        return f"{self.player_info.name} |{self.count_cards()}|"
+    
+    def show_player(self):
+        return f"{self.show_player_header()}\n{self.show_cards()}"
 
 class BlackJackDealer(BlackJackPlayer):
     cards: list[Card]
