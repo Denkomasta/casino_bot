@@ -66,9 +66,24 @@ async def subscribe(ctx):
     await ctx.send(f'{ctx.author.global_name}\'s account was deleted.')
 
 # command info
-@bot.command(name='info', help=f'Information about {BOTNAME}!')
+@bot.command(name='info', help=f'Displays information about {BOTNAME}!')
 async def info(ctx):
-    await ctx.send('I am nothing')     # TODO add info about bot
+    info_text = (
+        f"**{BOTNAME}** is a fun and interactive casino bot for Discord!\n\n"
+        "With this bot, you can:\n"
+        "- Play various casino games like poker and more (coming soon!)\n"
+        "- Check your balance and see how wealthy you are\n"
+        "- Compete with others on the leaderboard\n"
+        "- Pay other users and manage your casino account\n\n"
+        "Some commands:\n"
+        "- `!subscribe`: Subscribe to the casino and create an account\n"
+        "- `!unsubscribe`: Delete your casino account\n"
+        "- `!balance`: Check your current casino balance\n"
+        "- `!leaderboard`: View the top players by balance\n"
+        "- `!pay @user amount`: Pay another user a specified amount\n\n"
+        "Stay tuned for more exciting features and games!"
+    )
+    await ctx.send(info_text)
 
 # command balance
 @bot.command(name='balance', help='Check your casino balance.')
