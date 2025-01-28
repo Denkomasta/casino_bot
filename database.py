@@ -48,6 +48,7 @@ class Database:
             self.data.pop(a_id)
     
     # Returns a list of tuples (name, balance) of the top_n players
-    def get_leaderboard(self, top_n: int = 10) -> list:
+    def get_leaderboard(self, top_n: int = 10) -> list[tuple[str, int]]:
         sorted_players = sorted(self.data.items(), key=lambda item: item[1]["balance"], reverse=True)
-        return sorted_players[:top_n]
+        leaderboard = [(player_info["name"], player_info["balance"]) for _, player_info in sorted_players[:top_n]]
+        return leaderboard
