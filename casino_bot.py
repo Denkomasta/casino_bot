@@ -78,7 +78,18 @@ async def balance(ctx):
 # command leaderboard
 @bot.command(name='leaderboard', help='Check how wealthy are you.')
 async def leaderboard(ctx):
-    await ctx.send('Leaderboard TBD')      # TODO add implementation of leaderboard
+    header = f"{'Rank':<5} {'Name':<25} {'Balance':<10}\n"
+    header += "-" * 40 + "\n"
+    
+    rows = ""
+    for i, (_, player_info) in enumerate(Data.get_leaderboard()):
+        rank = i + 1
+        name = player_info['name'][:25]
+        balance = player_info['balance']
+        rows += f"{rank:<5} {name:<25} {balance:<10}\n"
+
+    table = header + rows 
+    await ctx.send(f"```\n{table}\n```")    # Code formatting
 
 # command pay
 @bot.command(name='pay', help='Pay another user with !pay @user amount')
