@@ -1,8 +1,9 @@
-from enums import GameType, GameState, E, PlayerState
+from enums import GameType, GameState, E, PlayerState, BaccaratBetType
 from typing import Callable, Awaitable
 from discord.ext import commands
 from base_classes import Game
 from black_jack import BlackJack
+from baccarat import Baccarat
 
 
 class CommandHandler:
@@ -206,5 +207,138 @@ class BlackJackCmdHandler(CommandHandler):
         "stand": cmd_stand,
         "bet": cmd_bet,
         "status": cmd_status,
+        "help": cmd_help
+    }
+
+
+class BaccaratCmdHandler(CommandHandler):
+
+    @staticmethod
+    async def cmd_run(game: Baccarat, ctx: commands.Context, args: list[str]) -> None:
+        if (len(args) == 0):
+            await ctx.send("There is no argument, use \"!baccarat help\" to see the options")
+        if (args[0] not in BaccaratCmdHandler.command_dict.keys()):
+            await ctx.send("Invalid argument, use \"!blackjack help\" to see the options")
+        await BaccaratCmdHandler.command_dict[args[0]](game, ctx, args)
+
+    @staticmethod
+    async def cmd_ready(game: Baccarat, ctx: commands.Context, args: list[str]):
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (game.state == GameState.RUNNING):
+            await ctx.send(f"Game is already running")
+            return
+        game.players[ctx.author.id].state = PlayerState.READY
+        await ctx.send(f"{ctx.author.name} is READY")
+        if (game.are_players_ready()):
+            game.collect_bets()
+            game.game_start()
+            game.evaluate_bets()
+            game.give_winnings()
+            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}```")
+            game.round_restart()
+
+    @staticmethod
+    async def cmd_unready(game: Baccarat, ctx: commands.Context, args: list[str]):
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (game.state == GameState.RUNNING):
+            await ctx.send(f"Game is already running")
+            return
+        game.players[ctx.author.id].state = PlayerState.NOT_READY
+        await ctx.send(f"{ctx.author.name} is UNREADY")
+
+    @staticmethod
+    async def cmd_bet(game: Baccarat, ctx: commands.Context, args: list[str]):
+        if (len(args) != 3):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 2")
+            return
+        try:
+            bet = int(args[1])
+        except Exception as _:
+            await ctx.send(f"Argument [bet] has to be number, try again")
+            return
+        
+        type: int
+
+        match args[2]:
+            case "banker":
+                type = BaccaratBetType.BANKER
+            case "player":
+                type = BaccaratBetType.PLAYER
+            case "tie":
+                type = BaccaratBetType.TIE
+            case _:
+                await ctx.send(f"Argument [type] has to be banker/player/tie, try again")
+                return
+            
+        game.change_bet(ctx.author, bet, type)
+        await ctx.send(f"{ctx.author.name}'s bet changed to {bet}")
+
+
+    @staticmethod
+    async def cmd_join(game: Baccarat, ctx: commands.Context, args: list[str]):
+        """Handles the 'join' command."""
+        if (len(args) != 3 and len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be < 3")
+            return
+        bet = 0
+        type = 0
+        if (len(args) == 3):
+            try:
+                bet = int(args[1])
+            except Exception as _:
+                await ctx.send(f"Argument [bet] has to be number, try again")
+                return
+            
+            match args[2]:
+                case "banker":
+                    type = BaccaratBetType.BANKER
+                case "player":
+                    type = BaccaratBetType.PLAYER
+                case "tie":
+                    type = BaccaratBetType.TIE
+                case _:
+                    await ctx.send(f"Argument [type] has to be banker/player/tie, try again")
+                    return
+        if (game.add_player(ctx.author, bet) == E.INV_STATE):
+             await ctx.send(f"Player {ctx.author.name} is already in the game!")
+             return
+        game.change_bet(ctx.author, bet, type)
+        await ctx.send(f"Player {ctx.author.name} joined the game! {('Your bet is set to 0, use !bj bet [number] to change it.' if bet == 0 else f' Bet set to {bet}.')}")
+
+    @staticmethod
+    async def cmd_leave(game: Baccarat, ctx: commands.Context, args: list[str]):
+        """Handles the 'leave' command."""
+        if (len(args) != 1):
+            await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
+            return
+        if (game.remove_player(ctx.author) == E.INV_STATE):
+             await ctx.send(f"Player {ctx.author.name} is not in the game!")
+             return
+        await ctx.send(f"Player {ctx.author.name} was removed from the game!")
+
+    @staticmethod
+    async def cmd_help(game: Baccarat, ctx: commands.Context, args: list[str]):
+        """Handles the 'help' command."""
+        help: list[str] = [
+            "create - creates a new game",
+            "exit - destroys current game",
+            "join [number] [type] - adds you to current game, with instead of number use size of your bet and instead of type use banker/player/tie",
+            "ready - sets you READY",
+            "unready - sets you UNREADY",
+            "bet [number][type]- changes your bet",
+        ]
+        await ctx.send("\n".join(help))
+
+
+    command_dict: dict[str, Callable[[Baccarat, commands.Context, list[str]], Awaitable[None]]] = {
+        "join": cmd_join,
+        "leave": cmd_leave,
+        "ready": cmd_ready,
+        "unready": cmd_unready,
+        "bet": cmd_bet,
         "help": cmd_help
     }

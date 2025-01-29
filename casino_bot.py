@@ -1,15 +1,18 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from cmd_handler import BlackJackCmdHandler
+from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler
 import os
 import asyncio
 import signal
 import sys
 from database import Database
 from black_jack import BlackJack, Card, Player
+from baccarat import Baccarat
+from base_classes import Game
+from enums import GameType
 
-Games: dict[int, BlackJack] = {}
+Games: dict[(int, int), Game] = {}
 Data: Database = Database()
 
 load_dotenv()
@@ -158,6 +161,7 @@ async def blackjack(ctx, *, arg_str):
     bj commands:
     * bj create - creates a new game of blackjack
     * bj join - joins existing game
+    * bj leave - leaves existing game
     * bj bet [amount]
     * bj ready - you are ready for your game
     * bj unready
@@ -173,25 +177,64 @@ async def blackjack(ctx, *, arg_str):
         await ctx.send(f'Invalid number of arguments')
     global Games
     if (argv[0] == "create"):
-        if (ctx.channel.id in Games.keys()):
+        if ((ctx.channel.id, GameType.BLACKJACK) in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[ctx.channel.id] = BlackJack(Data)
+        Games[(ctx.channel.id, GameType.BLACKJACK)] = BlackJack(Data)
         await ctx.send(f'Game was created, join the game using \'join -bet-\' and start the game using \'start\'')
         return
     if (argv[0] == "exit"):
-        if (ctx.channel.id not in Games.keys()):
+        if ((ctx.channel.id, GameType.BLACKJACK) not in Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop(ctx.channel.id)
+        Games.pop((ctx.channel.id, GameType.BLACKJACK))
         await ctx.send(f'Game was exited')
         return
-    if (ctx.channel.id not in Games.keys()):
+    if ((ctx.channel.id, GameType.BLACKJACK) not in Games.keys()):
             await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
             return
-    await BlackJackCmdHandler.cmd_run(Games[ctx.channel.id], ctx, argv)
+    await BlackJackCmdHandler.cmd_run(Games[(ctx.channel.id, GameType.BLACKJACK)], ctx, argv)
 
         # TODO add implementation of blackjack game
+
+# command blackjack
+@bot.command(name='baccarat', aliases=["bc"])
+async def baccarat(ctx, *, arg_str):
+    """
+    Play a game of baccarat!
+
+    bj commands:
+    * bj create - creates a new game of blackjack
+    * bj join - joins existing game
+    * bj leave - leave existing game
+    * bj bet [amount] [type]
+    * bj ready - you are ready for your game
+    * bj unready
+    * bj exit
+    """
+
+    argv = arg_str.split(' ')
+    if (len(argv) > 3 or len(argv) < 1):
+        await ctx.send(f'Invalid number of arguments')
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.BACCARAT) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+        Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(Data)
+        await ctx.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'')
+        return
+    if (argv[0] == "exit"):
+        if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.BACCARAT))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
+            return
+    await BaccaratCmdHandler.cmd_run(Games[(ctx.channel.id, GameType.BACCARAT)], ctx, argv)
 
 # command coinflip
 @bot.command(name='coinflip', help='Flip a coin.')

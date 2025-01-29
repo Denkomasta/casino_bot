@@ -14,6 +14,7 @@ class GameType(IntEnum):
     POKER = 2
     ROULETTE = 3
     SLOTS = 4
+    BACCARAT = 5
 
 class GameState(IntEnum):
     WAITING_FOR_PLAYERS = 0
@@ -37,4 +38,10 @@ class PlayerResult:
     DEFEAT = 0
     VICTORY = 1
     DRAW = 2
+    UNDEFINED = 3
+
+class BaccaratBetType:
+    PLAYER = 0
+    BANKER = 1
+    TIE = 2
     UNDEFINED = 3

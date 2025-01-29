@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from enums import GameType, PlayerState, GameState, PlayerResult, E, CardSuits
+from enums import GameType, PlayerState, GameState, PlayerResult, E, CardSuits, BaccaratBetType
 from database import Database
 import discord
 from ascii_obj import Ascii
+from random import randrange
 
 class Card:
     value: int
@@ -81,6 +82,9 @@ class Game(ABC):
             case GameType.BLACKJACK:
                 from black_jack import BlackJackPlayer
                 self.players[player_info.id] = BlackJackPlayer(player_info, bet)
+            case GameType.BACCARAT:
+                from baccarat import BaccaratPlayer
+                self.players[player_info.id] = BaccaratPlayer(player_info, bet, BaccaratBetType.UNDEFINED)
         return E.SUCCESS
     
     def remove_player(self, player_info: discord.User | discord.Member) -> E:
@@ -118,4 +122,7 @@ class CardGame(Game):
 
     def get_new_deck(self) -> list[Card]:
         return [Card(suit, value, True) for suit in CardSuits if suit != CardSuits.UNSHOWABLE for value in range(1, 14)]
+    
+    def draw_card(self) -> Card:
+        return self.deck.pop(randrange(len(self.deck)))
 
