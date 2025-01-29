@@ -65,9 +65,8 @@ class BlackJackCmdHandler(CommandHandler):
              return
         await ctx.send(f"Player {ctx.author.name} was removed from the game!")
 
-    @staticmethod
+    """ @staticmethod
     async def cmd_start(game: BlackJack, ctx: commands.Context, args: list[str]):
-        """Handles the 'start' command."""
         if (len(args) != 1):
             await ctx.send(f"Invalid number of arguments: is {len(args)} should be 1")
             return
@@ -79,7 +78,7 @@ class BlackJackCmdHandler(CommandHandler):
         game.check_blackjack()
         if (game.is_everyone_finished()):
             await BlackJackCmdHandler.blackjack_finish(game, ctx)
-            return
+            return """
 
     @staticmethod
     async def cmd_ready(game: BlackJack, ctx: commands.Context, args: list[str]):
@@ -92,6 +91,13 @@ class BlackJackCmdHandler(CommandHandler):
             return
         game.players[ctx.author.id].state = PlayerState.READY
         await ctx.send(f"{ctx.author.name} is READY")
+        if (game.are_players_ready()):
+            game.game_start()
+            await ctx.send(f"```\n{game.show_game()}\n```")
+            game.check_blackjack()
+            if (game.is_everyone_finished()):
+                await BlackJackCmdHandler.blackjack_finish(game, ctx)
+                return
     
     @staticmethod
     async def cmd_unready(game: BlackJack, ctx: commands.Context, args: list[str]):
@@ -174,7 +180,7 @@ class BlackJackCmdHandler(CommandHandler):
             "join [number] - adds you to current game, with instead of number use size of your bet",
             "ready - sets you READY",
             "unready - sets you UNREADY",
-            "start - starts the game if all players are READY",
+            #"start - starts the game if all players are READY",
             "hit - get a card",
             "stand - end your turn",
             "bet [number] - changes your bet",
@@ -193,7 +199,7 @@ class BlackJackCmdHandler(CommandHandler):
         "restart": cmd_restart,
         "join": cmd_join,
         "leave": cmd_leave,
-        "start": cmd_start,
+        #"start": cmd_start,
         "ready": cmd_ready,
         "unready": cmd_unready,
         "hit": cmd_hit,
