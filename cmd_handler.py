@@ -78,9 +78,7 @@ class BlackJackCmdHandler(CommandHandler):
         await ctx.send(f"```\n{game.show_game()}\n```")
         game.check_blackjack()
         if (game.is_everyone_finished()):
-            game.game_finish()
-            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
-            game.round_restart()
+            await BlackJackCmdHandler.blackjack_finish(game, ctx)
             return
 
     @staticmethod
@@ -116,9 +114,7 @@ class BlackJackCmdHandler(CommandHandler):
         can_play: E = game.player_hit(ctx.author)
         await ctx.send(f"```{game.players[ctx.author.id].show_player()}```")
         if (game.is_everyone_finished()):
-            game.game_finish()
-            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
-            game.round_restart()
+            await BlackJackCmdHandler.blackjack_finish(game, ctx)
             return
         if (can_play == E.INV_STATE):
             await ctx.send(f"{ctx.author.name} cannot hit anymore")
@@ -133,9 +129,7 @@ class BlackJackCmdHandler(CommandHandler):
             await ctx.send(f"{ctx.author.name} already stands")
             return
         if (game.is_everyone_finished()):
-            game.game_finish()
-            await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
-            game.round_restart()
+            await BlackJackCmdHandler.blackjack_finish(game, ctx)
             return
         await ctx.send(f"{ctx.author.name} now stands")
         
@@ -187,6 +181,13 @@ class BlackJackCmdHandler(CommandHandler):
             "restart - restarts the game, but players and bets will stay",
         ]
         await ctx.send("\n".join(help))
+
+    @staticmethod
+    async def blackjack_finish(game: BlackJack, ctx: commands.Context):
+        game.game_finish()
+        await ctx.send(f"```\n{game.show_game()}\n{game.show_results()}\n```")
+        game.round_restart()
+    
 
     command_dict: dict[str, Callable[[BlackJack, commands.Context, list[str]], Awaitable[None]]] = {
         "restart": cmd_restart,
