@@ -15,6 +15,7 @@ class GameType(IntEnum):
     ROULETTE = 3
     SLOTS = 4
     BACCARAT = 5
+    ROLLTHEDICE = 6
 
 class GameState(IntEnum):
     WAITING_FOR_PLAYERS = 0
