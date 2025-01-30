@@ -29,6 +29,7 @@ Welcome to **Casino Bot**, a fun and interactive casino bot for Discord! With Ca
 
 You can use this URL to add **Casino Bot**: https://discord.com/oauth2/authorize?client_id=1316098634776973333&scope=bot&permissions=274878430272
 
+Or you can download the code and run it yourself.
 To run Casino Bot, you need to have a `.env` file with the following configuration:
 
 ```plaintext
