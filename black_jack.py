@@ -62,7 +62,7 @@ class BlackJack(CardGame):
         self.dealer.cards.append(hidden_card)
         for _ in range(2):
             for player in self.players.values():
-                player.cards.append(self.deck.pop(randrange(len(self.deck))))
+                player.cards.append(self.draw_card())
         self.dealer.cards.append(self.deck.pop(randrange(len(self.deck))))
 
 
@@ -70,7 +70,7 @@ class BlackJack(CardGame):
         player: BlackJackPlayer = self.players[player_info.id]
         if (player.state != PlayerState.PLAYING):
             return E.INV_STATE
-        card: Card = self.deck.pop(randrange(len(self.deck)))
+        card: Card = self.draw_card()
         player.cards.append(card)
         if (player.count_cards() == 21):
             player.state = PlayerState.FINISHED
@@ -95,7 +95,7 @@ class BlackJack(CardGame):
         for card in self.dealer.cards:
             card.showable = True
         while (self.dealer.count_cards() < 17):
-            self.dealer.cards.append(self.deck.pop(randrange(len(self.deck))))
+            self.dealer.cards.append(self.draw_card())
 
     def evaluate(self) -> None:
         dealers_count: int = self.dealer.count_cards()
