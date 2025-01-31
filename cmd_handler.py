@@ -552,9 +552,9 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         for number, bets in game.bets.items():
             for bet in bets:
                 if number > winning_number:
-                    await ctx.send(f"{bet.player.name} your number was too **high**!", ephemeral=True)
+                    await ctx.author.send(f"{bet.player.name} your number was too **high**!")   # TODO Change to ephemeral interaction
                 else:
-                    await ctx.send(f"{bet.player.name} your number was too **low**!", ephemeral=True)
+                    await ctx.author.send(f"{bet.player.name} your number was too **low**!")
             
     # TODO only one guess
     @staticmethod
