@@ -7,6 +7,7 @@ class E(IntEnum):
     OUT_OF_RANGE = -3
     INV_PLAYER = -4
     INV_BET = -5
+    DUPLICITE_BET = -6
 
 class GameType(IntEnum):
     BLACKJACK = 0

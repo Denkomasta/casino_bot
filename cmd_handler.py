@@ -390,10 +390,6 @@ class RNGCmdHandler(CommandHandler):
             await ctx.send(f"{ctx.message.author.mention} You are already ready for the roll!")
             return
         await ctx.send(f"Player {ctx.author.display_name} is ready for the roll!")
-        if game.check_ready():
-            await ctx.send("All players are ready! Rolling!")
-            await RNGCmdHandler.command_roll(game, ctx, argv)
-
 
     @staticmethod
     async def command_unready(game: RNGGame, ctx: commands.Context, argv: list[str]):
@@ -485,10 +481,35 @@ class CoinflipCmdHandler(RNGCmdHandler):
         if cmd_status == E.INSUFFICIENT_FUNDS:
             await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your balance. Try again with less!")
             return
+        if cmd_status == E.DUPLICITE_BET:
+            await ctx.send(f"Player {ctx.author.display_name} has successfully bet another {bet} on {argv[1]}")
+            return
         await ctx.send(f"Player {ctx.author.display_name} has successfully bet {bet} on {argv[1]}")
 
+    #Override
+    @staticmethod
+    async def command_ready(game, ctx, argv):
+        await RNGCmdHandler.command_ready(game, ctx, argv)
+        if game.check_ready():
+            await ctx.send("All players are ready! Rolling!")
+            await CoinflipCmdHandler.command_roll(game, ctx, argv)
+
+    #Override
+    @staticmethod
+    async def command_roll(game, ctx, argv):
+        winning_bets: list[Bet] = game.roll()
+        side = "HEADS" if CoinflipSides(game.last_roll) == CoinflipSides.HEADS else "TAILS"
+        await ctx.send(f"The winning side is: {side}!")
+        await ctx.send(game.build_winners_message(winning_bets))
+        if game.give_winnings(winning_bets) == E.INV_PLAYER:
+            await ctx.send(f"One or more players could not collect their winning because they left the game :(")
+        game.restart_game()
+        await ctx.send(f"The game has been restarted, bet and try your luck again!")
+
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
-        "bet": command_bet
+        "bet": command_bet,
+        "roll": command_roll,
+        "ready": command_ready
     }
 
 class RollTheDiceCmdHandler(RNGCmdHandler):

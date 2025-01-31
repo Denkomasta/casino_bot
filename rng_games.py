@@ -3,7 +3,7 @@ from random import randrange
 import discord
 from discord.ext import commands
 from enums import E, GameType, CoinflipSides
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Type
 from database import Database
 from base_classes import Game
 
@@ -57,17 +57,29 @@ class RNGGame(Game, ABC):
         self.players.pop(player_id)
         return E.SUCCESS
     
-    def place_bet(self, player_id: int, bet: int, number: int, odd: int) -> E:
+    def place_bet(self, player_id: int, bet_amount: int, number: int, odd: int) -> E:
         if self.players.get(player_id, None) is None:
             return E.INV_PLAYER
         if number < self.lowest or number > self.highest:
             return E.OUT_OF_RANGE
-        if bet > self.database.get_player_balance(player_id):
-            return E.INSUFFICIENT_FUNDS       
-        new_bet = Bet(self.players[player_id], bet, odd)
+        if bet_amount > self.database.get_player_balance(player_id):
+            return E.INSUFFICIENT_FUNDS
+        existing_bet = self.find_duplicite_bet(player_id, number)
+        if existing_bet is not None:
+            existing_bet.bet += bet_amount
+            existing_bet.possible_winning = bet_amount * odd
+            self.database.change_player_balance(player_id, -bet_amount)
+            return E.DUPLICITE_BET
+        new_bet = Bet(self.players[player_id], bet_amount, odd)
         self.bets[number].append(new_bet)
-        self.database.change_player_balance(player_id, -bet)
+        self.database.change_player_balance(player_id, -bet_amount)
         return E.SUCCESS
+    
+    def find_duplicite_bet(self, player_id: int, number: int) -> Bet | None:
+        for bet in self.bets[number]:
+            if bet.player.player_id == player_id:
+                return bet
+        return None
     
     def ready_up(self, player_id: int) -> E:
         if self.players.get(player_id, None) is None:
