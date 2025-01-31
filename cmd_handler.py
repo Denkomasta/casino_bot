@@ -551,7 +551,7 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         
         for number, bets in game.bets.items():
             for bet in bets:
-                user = ctx.guild.get_member(bet.player.player_id)
+                user = ctx.guild.get_member(bet.player.player_id)       # TODO change player_id in RNGplayer to discord author.
                 if number > winning_number:
                     await user.send(f"{bet.player.name} your number was too **high**!")   # TODO Change to ephemeral interaction
                 else:
@@ -569,7 +569,7 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         except ValueError:
             await ctx.send(f"Invalid format of the command, the number and the amount must be a whole number.")
             return
-        cmd_status: E = game.change_bet(ctx.author.id, amount, number, (game.highest - game.lowest + 1) // game.rounds)
+        cmd_status: E = game.change_bet(ctx.author.id, amount, number, (game.highest - game.lowest + 1) // game.rounds)     # TODO change odds with logarithm
         if cmd_status == E.INV_PLAYER:
             await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
         if cmd_status == E.INSUFFICIENT_FUNDS:

@@ -24,6 +24,7 @@ CHAIN_DELIM = ";"
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix=CMD_PREFIX, case_insensitive=True, intents=intents)
 
 @bot.event
