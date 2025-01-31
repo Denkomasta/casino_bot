@@ -518,7 +518,7 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
 class GuessNumberCmdHandler(RNGCmdHandler):
 
     @staticmethod
-    async def command_ready(game, ctx, argv):
+    async def command_ready(game, ctx, argv):      # TODO add check if everyone has a bet
         await RNGCmdHandler.command_ready(game, ctx, argv)
         if game.check_ready():
             await ctx.send("All players are ready! Evaluating!")
@@ -551,15 +551,16 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         
         for number, bets in game.bets.items():
             for bet in bets:
+                user = ctx.guild.get_member(bet.player.player_id)
                 if number > winning_number:
-                    await ctx.author.send(f"{bet.player.name} your number was too **high**!")   # TODO Change to ephemeral interaction
+                    await user.send(f"{bet.player.name} your number was too **high**!")   # TODO Change to ephemeral interaction
                 else:
-                    await ctx.author.send(f"{bet.player.name} your number was too **low**!")
+                    await user.send(f"{bet.player.name} your number was too **low**!")
             
     # TODO only one guess
     @staticmethod
     async def command_guess(game: GuessTheNumber, ctx, argv):   # !gtn guess [number] [amount]
-        if len(argv) != 3:
+        if len(argv) != 3:      # TODO possible 2 args when u dont want to change amount
             await RNGCmdHandler.inv_args_message(game, ctx)
             return
         try:
