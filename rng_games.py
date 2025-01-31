@@ -208,9 +208,12 @@ class GuessTheNumber(RNGGame):
     rounds: int
     remaining_rounds: int
     def __init__(self, data: Database):
-        super().__init__(data, "GuessTheNumber", 1, 100, GameType.GUESSNUMBER)
         self.rounds = 3
         self.remaining_rounds = self.rounds
+        super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER)
+    
+    def get_bets_msg(self):
+        pass
 
 class RollTheDice(RNGGame):
     def __init__(self, data: Database):

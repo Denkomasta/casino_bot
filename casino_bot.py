@@ -306,7 +306,10 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
     if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
             await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
             return
-    await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
+    try:
+        await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
+    except Exception as e:
+        print(e)
 
 # command roulette
 @bot.command(name='roulette', help='Spin a roulette.')
@@ -318,8 +321,8 @@ async def roulette(ctx):
 async def slots(ctx):
     await ctx.send('Slots TBD')      # TODO add implementation of slots
 
-@bot.command(name='GuessNumber', help='Guess the number game. Use !guess <number> to play.', aliases=["gtn"])
-async def GuessNumber(ctx: commands.Context, arg_str: str = ""):
+@bot.command(name='GuessNumber', aliases=["gtn"])
+async def GuessNumber(ctx: commands.Context, *, arg_str: str):
     """
     Play a game of Guess The Number (gtn)!
 
@@ -335,29 +338,40 @@ async def GuessNumber(ctx: commands.Context, arg_str: str = ""):
     * gtn bets - displays all currently placed bets
     """
 
-    if (len(arg_str) == 0):
-        await ctx.send(f"No argument, run {CMD_PREFIX}gtn help for available commands")
-        return
     argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run !cf help for available commands")
+        return
     global Games
+    key = (ctx.channel.id, GameType.GUESSNUMBER)
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.GUESSNUMBER) in Games.keys()):
+        if (key in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.GUESSNUMBER)] = GuessTheNumber(Data)
-        await ctx.send(f'Game was created, join the game using \'join -balance-\'')
+
+        try:
+            Games[key] = GuessTheNumber(Data)
+        except Exception as e:
+            print(f"Error creating game: {e}")
+            await ctx.send(f'Error creating game')
+            return
+
+        await ctx.send(f'Game was created, join the game using \'join\'')
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.GUESSNUMBER) not in Games.keys()):
+        if (key not in Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop((ctx.channel.id, GameType.GUESSNUMBER))
+        Games.pop(key)
         await ctx.send(f'Game was exited')
         return
-    if ((ctx.channel.id, GameType.GUESSNUMBER) not in Games.keys()):
-            await ctx.send(f'Game does not exist, use \'{CMD_PREFIX}gtn create\' to use commands')
-            return
-    await GuessNumberCmdHandler.command_run(Games[(ctx.channel.id, GameType.GUESSNUMBER)], ctx, argv)
+    if (key not in Games.keys()):
+        await ctx.send(f'Game does not exist, use \'{CMD_PREFIX}gtn create\' to use commands')
+        return
+    try:
+        await GuessNumberCmdHandler.command_run(Games[key], ctx, argv)
+    except Exception as e:
+        print(e)
 
 # command poker
 @bot.command(name='poker', help='Play a game of poker.')

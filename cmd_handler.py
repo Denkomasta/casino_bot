@@ -522,7 +522,7 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         await RNGCmdHandler.command_ready(game, ctx, argv)
         if game.check_ready():
             await ctx.send("All players are ready! Evaluating!")
-            await CoinflipCmdHandler.command_roll(game, ctx, argv)
+            await GuessNumberCmdHandler.command_roll(game, ctx, argv)
     
     @staticmethod
     async def command_roll(game: GuessTheNumber, ctx, argv):
@@ -537,22 +537,26 @@ class GuessNumberCmdHandler(RNGCmdHandler):
             game.give_winnings(winning_bets)
             await ctx.send(game.build_winners_message(winning_bets))
             game.restart_game()
-            await ctx.send(f"The game has been restarted, bet and try your luck again!")
+            await ctx.send(f"The game has been restarted, winning number was: {winning_number}, bet and try your luck again!")
             return
 
         if game.remaining_rounds == 0:
             game.restart_game()
-            await ctx.send(f"The game has no champion! It has been restarted, bet and try your luck again!")
+            await ctx.send(f"The game has no champion, the winning number was: {winning_number}! Game has been restarted, bet and try your luck again!")
             return
 
         await ctx.send(f"No winners this round! Change your guesses and try again!")
         for player in game.players.values():
             player.ready = False
-            if player.bet.value > winning_number:
-                ctx.send(f"{player.name} your number was too high!", ephemeral=True)
-            else:
-                ctx.send(f"{player.name} your number was too low!", ephemeral=True)
-
+        
+        for number, bets in game.bets.items():
+            for bet in bets:
+                if number > winning_number:
+                    await ctx.send(f"{bet.player.name} your number was too **high**!", ephemeral=True)
+                else:
+                    await ctx.send(f"{bet.player.name} your number was too **low**!", ephemeral=True)
+            
+    # TODO only one guess
     @staticmethod
     async def command_guess(game: GuessTheNumber, ctx, argv):   # !gtn guess [number] [amount]
         if len(argv) != 3:
