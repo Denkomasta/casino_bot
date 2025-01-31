@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler, CoinflipCmdHandler, RollTheDiceCmdHandler
+from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler, CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 import os
 import asyncio
 import signal
@@ -11,7 +11,7 @@ from black_jack import BlackJack, Card, Player
 from baccarat import Baccarat
 from base_classes import Game
 from enums import GameType
-from rng_games import Coinflip, RollTheDice
+from rng_games import Coinflip, RollTheDice, GuessTheNumber
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
@@ -286,7 +286,7 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
 async def rollthedice(ctx: commands.Context, *, arg_str: str):
     argv = arg_str.split(' ')
     if (len(argv) < 1):
-        await ctx.send(f"No argument, run !rtd help for available commands")
+        await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
         return
     global Games
     if (argv[0] == "create"):
@@ -317,6 +317,47 @@ async def roulette(ctx):
 @bot.command(name='slots', help='Play slot machine.')
 async def slots(ctx):
     await ctx.send('Slots TBD')      # TODO add implementation of slots
+
+@bot.command(name='GuessNumber', help='Guess the number game. Use !guess <number> to play.', aliases=["gtn"])
+async def GuessNumber(ctx: commands.Context, arg_str: str = ""):
+    """
+    Play a game of Guess The Number (gtn)!
+
+    gtn commands:
+    * gtn create - creates a new game of guess then number
+    * gtn exit - removes existing game of gtn from the current room
+    * gtn join - joins an existing game
+    * gtn leave - leaves the game you participate in
+    * gtn guess [number] [amount] - places a bet of "amount" on the selected option
+    * gtn ready - sets a player ready to flip the coin
+    * gtn unready - unsets the ready status
+    * gtn status - displays the status of the game
+    * gtn bets - displays all currently placed bets
+    """
+
+    if (len(arg_str) == 0):
+        await ctx.send(f"No argument, run {CMD_PREFIX}gtn help for available commands")
+        return
+    argv = arg_str.split(' ')
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.GUESSNUMBER) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+        Games[(ctx.channel.id, GameType.GUESSNUMBER)] = GuessTheNumber(Data)
+        await ctx.send(f'Game was created, join the game using \'join -balance-\'')
+        return
+    if (argv[0] == "exit"):
+        if ((ctx.channel.id, GameType.GUESSNUMBER) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.GUESSNUMBER))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.GUESSNUMBER) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'{CMD_PREFIX}gtn create\' to use commands')
+            return
+    await GuessNumberCmdHandler.command_run(Games[(ctx.channel.id, GameType.GUESSNUMBER)], ctx, argv)
 
 # command poker
 @bot.command(name='poker', help='Play a game of poker.')

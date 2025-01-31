@@ -4,7 +4,7 @@ from discord.ext import commands
 from base_classes import Game
 from black_jack import BlackJack
 from baccarat import Baccarat
-from rng_games import RNGGame, Bet, Coinflip, RollTheDice
+from rng_games import RNGGame, Bet, Coinflip, RollTheDice, GuessTheNumber
 from abc import ABC, abstractmethod
 
 
@@ -514,3 +514,77 @@ class CoinflipCmdHandler(RNGCmdHandler):
 
 class RollTheDiceCmdHandler(RNGCmdHandler):
     pass
+
+class GuessNumberCmdHandler(RNGCmdHandler):
+
+    @staticmethod
+    async def command_ready(game, ctx, argv):
+        await RNGCmdHandler.command_ready(game, ctx, argv)
+        if game.check_ready():
+            await ctx.send("All players are ready! Evaluating!")
+            await CoinflipCmdHandler.command_roll(game, ctx, argv)
+    
+    @staticmethod
+    async def command_roll(game: GuessTheNumber, ctx, argv):
+        winning_number = game.last_roll
+        if winning_number is None:
+            game.roll()
+            winning_number = game.last_roll
+
+        winning_bets: list[Bet] = game.bets[winning_number]
+        game.remaining_rounds -= 1
+        if len(winning_bets) > 0:
+            game.give_winnings(winning_bets)
+            await ctx.send(game.build_winners_message(winning_bets))
+            game.restart_game()
+            await ctx.send(f"The game has been restarted, bet and try your luck again!")
+            return
+
+        if game.remaining_rounds == 0:
+            game.restart_game()
+            await ctx.send(f"The game has no champion! It has been restarted, bet and try your luck again!")
+            return
+
+        await ctx.send(f"No winners this round! Change your guesses and try again!")
+        for player in game.players.values():
+            player.ready = False
+            if player.bet.value > winning_number:
+                ctx.send(f"{player.name} your number was too high!", ephemeral=True)
+            else:
+                ctx.send(f"{player.name} your number was too low!", ephemeral=True)
+
+    @staticmethod
+    async def command_guess(game: GuessTheNumber, ctx, argv):   # !gtn guess [number] [amount]
+        if len(argv) != 3:
+            await RNGCmdHandler.inv_args_message(game, ctx)
+            return
+        try:
+            number = int(argv[1])
+            amount = int(argv[2])
+        except ValueError:
+            await ctx.send(f"Invalid format of the command, the number and the amount must be a whole number.")
+            return
+        cmd_status: E = game.change_bet(ctx.author.id, amount, number, (game.highest - game.lowest + 1) // game.rounds)
+        if cmd_status == E.INV_PLAYER:
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+        if cmd_status == E.INSUFFICIENT_FUNDS:
+            await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your balance. Try again with less!")
+            return
+        await ctx.send(f"Player {ctx.author.display_name} has successfully bet {amount} on number {number}, good luck!")
+    
+
+    @staticmethod
+    async def command_run(game: GuessTheNumber, ctx: commands.Context, argv: list[str]):
+        command = argv[0]
+        if GuessNumberCmdHandler.commands_dict.get(command, None) is None:
+            if RNGCmdHandler.commands_dict.get(command, None) is None:
+                await ctx.send(f"Unknown command, run !help {game.name} for available commands")
+                return
+            await RNGCmdHandler.commands_dict[command](game, ctx, argv)
+            return
+        await GuessNumberCmdHandler.commands_dict[command](game, ctx, argv)
+    
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
+        "guess": command_guess,
+        "ready": command_ready,
+    }

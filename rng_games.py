@@ -80,6 +80,39 @@ class RNGGame(Game, ABC):
             if bet.player.player_id == player_id:
                 return bet
         return None
+
+    def change_bet(self, player_id: int, new_bet_amount: int, new_number: int, new_odd: int) -> E:
+        if self.players.get(player_id, None) is None:
+            return E.INV_PLAYER
+        if new_number < self.lowest or new_number > self.highest:
+            return E.OUT_OF_RANGE
+        temp = self.find_bet_by_player(player_id)
+        if temp is None:
+            return self.place_bet(player_id, new_bet_amount, new_number, new_odd)
+
+        existing_bet = self.bets[temp[0]][temp[1]]
+        number, index = temp
+        if new_bet_amount > self.database.get_player_balance(player_id):
+            return E.INSUFFICIENT_FUNDS
+
+        if new_bet_amount != existing_bet.bet:
+            self.database.change_player_balance(player_id, existing_bet.bet)
+            existing_bet.bet = new_bet_amount
+            existing_bet.possible_winning = new_bet_amount * new_odd
+            self.database.change_player_balance(player_id, -new_bet_amount)
+        
+        if new_number != number:
+            self.bets[number].pop(index)
+            self.bets[new_number].append(existing_bet)
+
+        return E.SUCCESS
+    
+    def find_bet_by_player(self, player_id: int) -> tuple[int, int] | None:
+        for number, bets in self.bets.items():
+            for i in range(len(bets)):
+                if bets[i].player.player_id == player_id:
+                    return number, i
+        return None
     
     def ready_up(self, player_id: int) -> E:
         if self.players.get(player_id, None) is None:
@@ -105,7 +138,7 @@ class RNGGame(Game, ABC):
                 return False
         return True
     
-    def roll(self) -> tuple[int, list[Bet]]:
+    def roll(self) -> list[Bet]:
         winning_number: int = randrange(self.lowest, self.highest + 1)
         self.last_roll = winning_number
         return self.bets[winning_number]
@@ -170,6 +203,14 @@ class Coinflip(RNGGame):
                 message += ", "
             message += f"({bet.player.name}, {bet.bet})"
         return message
+
+class GuessTheNumber(RNGGame):
+    rounds: int
+    remaining_rounds: int
+    def __init__(self, data: Database):
+        super().__init__(data, "GuessTheNumber", 1, 100, GameType.GUESSNUMBER)
+        self.rounds = 3
+        self.remaining_rounds = self.rounds
 
 class RollTheDice(RNGGame):
     def __init__(self, data: Database):
