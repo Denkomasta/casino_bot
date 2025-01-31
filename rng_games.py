@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
 from discord.ext import commands
-from enums import E
+from enums import E, GameType
 from typing import Callable, Awaitable
 from database import Database
-
+from base_classes import Game
 
 class RNGPlayer:
     player_id: int
@@ -29,7 +29,7 @@ class Bet:
         self.odd = odd
         self.possible_winning = self.bet * self.odd
 
-class RNGGame(ABC):
+class RNGGame(Game):
     name: str
     lowest: int
     highest: int
@@ -38,7 +38,8 @@ class RNGGame(ABC):
     last_roll: int | None
     database: Database
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]]
-    def __init__(self, database: Database, name: str, lowest: int, highest: int):
+    def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType):
+        super().__init__(database, gametype)
         self.database = database
         self.name = name
         self.lowest = lowest
@@ -131,9 +132,9 @@ class RNGGame(ABC):
             player.ready = False
 
 class Coinflip(RNGGame):
-    def __init__(self):
-        super().__init__("coinflip", 1, 2)
+    def __init__(self, data: Database):
+        super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP)
 
 class RollTheDice(RNGGame):
-    def __init__(self):
-        super().__init__("dice", 1, 6)
+    def __init__(self, data: Database):
+        super().__init__(data, "dice", 1, 6, GameType.ROLLTHEDICE)

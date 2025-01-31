@@ -353,7 +353,7 @@ class RNGCmdHandler(ABC, CommandHandler):
         if RNGCmdHandler.commands_dict.get(command, None) is None:
             await ctx.send(f"Unknown command, run !{game.name} help for available commands")
             return
-        await RNGCmdHandler.commands_dict[command](ctx, argv)
+        await RNGCmdHandler.commands_dict[command](game, ctx, argv)
 
     @staticmethod
     async def inv_args_message(game: RNGGame, ctx: commands.Context):
@@ -362,7 +362,7 @@ class RNGCmdHandler(ABC, CommandHandler):
     @staticmethod
     async def command_join(game: RNGGame, ctx: commands.Context, argv: list[str]):
         if len(argv) > 2:
-            await RNGCmdHandler.inv_args_message(ctx)
+            await RNGCmdHandler.inv_args_message(game, ctx)
             return
         try:
             bet: int = int(argv[1])
@@ -376,8 +376,7 @@ class RNGCmdHandler(ABC, CommandHandler):
         if cmd_status == E.INSUFFICIENT_FUNDS:
             await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your server balance!")
             return
-        await ctx.send(f"Player {ctx.author.display_name} has successfully joined the game with balance {game.players[ctx.author.id].balance}\n\
-                        {ctx.message.author.mention} The in-game balance was deducted from your global balance and will be returned when you leave using !{self.name} leave")
+        await ctx.send(f"Player {ctx.author.display_name} has successfully joined the game with balance {game.players[ctx.author.id].balance}\n{ctx.message.author.mention} The in-game balance was deducted from your global balance and will be returned when you leave using !{game.name} leave")
 
     @staticmethod
     async def command_leave(game: RNGGame, ctx: commands.Context, argv: list[str]):
@@ -389,7 +388,7 @@ class RNGCmdHandler(ABC, CommandHandler):
     @staticmethod
     async def command_bet(game: RNGGame, ctx: commands.Context, argv: list[str]):
         if len(argv) != 3:
-            await RNGCmdHandler.inv_args_message(ctx)
+            await RNGCmdHandler.inv_args_message(game, ctx)
             return
         try:
             number = int(argv[1])
@@ -401,7 +400,7 @@ class RNGCmdHandler(ABC, CommandHandler):
         if cmd_status == E.INV_PLAYER:
             ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join [balance] to participate")
         if cmd_status == E.OUT_OF_RANGE:
-            await ctx.send(f"{ctx.message.author.mention} The number you want to bet on is out of the valid range. Bet on a number between {game.lowest} and {game.lowest}")
+            await ctx.send(f"{ctx.message.author.mention} The number you want to bet on is out of the valid range. Bet on a number between {game.lowest} and {game.highest}")
             return
         if cmd_status == E.INSUFFICIENT_FUNDS:
             await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your in-game balance. Try again with less or re-join the game with higher balance!")
@@ -418,6 +417,10 @@ class RNGCmdHandler(ABC, CommandHandler):
             ctx.send(f"{ctx.message.author.mention} You are already ready for the roll!")
             return
         await ctx.send(f"Player {ctx.author.display_name} is ready for the roll!")
+        if game.check_ready():
+            await ctx.send("All players are ready! Rolling!")
+            await RNGCmdHandler.command_roll(game, ctx, argv)
+
 
     @staticmethod
     async def command_unready(game: RNGGame, ctx: commands.Context, argv: list[str]):
@@ -429,11 +432,8 @@ class RNGCmdHandler(ABC, CommandHandler):
 
     @staticmethod
     async def command_roll(game: RNGGame, ctx: commands.Context, argv: list[str]):
-        if not game.check_ready():
-            await ctx.send(f"All players must be ready in order to roll!")
-            return
         winning_bets: list[Bet] = game.roll()
-        await ctx.send(f"The winning number is: {game.last_roll}! �")
+        await ctx.send(f"The winning number is: {game.last_roll}!")
         await ctx.send(game.build_winners_message(winning_bets))
         if game.give_winnings(winning_bets) == E.INV_PLAYER:
             await ctx.send(f"One or more players could not collect their winning because they left the game :(")
@@ -449,7 +449,7 @@ class RNGCmdHandler(ABC, CommandHandler):
             "roll": command_roll
         }
     
-class CoinflipHandler(RNGCmdHandler):
+class CoinflipCmdHandler(RNGCmdHandler):
     pass
 
 class RollTheDiceCmdHandler(RNGCmdHandler):
