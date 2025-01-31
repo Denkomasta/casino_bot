@@ -46,3 +46,7 @@ class BaccaratBetType:
     BANKER = 1
     TIE = 2
     UNDEFINED = 3
+
+class CoinflipSides(IntEnum):
+    HEADS = 1
+    TAILS = 2

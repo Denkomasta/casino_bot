@@ -1,11 +1,11 @@
-from enums import GameType, GameState, E, PlayerState, BaccaratBetType
+from enums import GameType, GameState, E, PlayerState, BaccaratBetType, CoinflipSides
 from typing import Callable, Awaitable
 from discord.ext import commands
 from base_classes import Game
 from black_jack import BlackJack
 from baccarat import Baccarat
-from rng_games import RNGGame, Bet
-from abc import ABC
+from rng_games import RNGGame, Bet, Coinflip, RollTheDice
+from abc import ABC, abstractmethod
 
 
 class CommandHandler:
@@ -345,15 +345,11 @@ class BaccaratCmdHandler(CommandHandler):
         "help": cmd_help
     }
 
-class RNGCmdHandler(ABC, CommandHandler):
+class RNGCmdHandler(CommandHandler):
     
     @staticmethod
     async def command_run(game: RNGGame, ctx: commands.Context, argv: list[str]):
-        command = argv[0]
-        if RNGCmdHandler.commands_dict.get(command, None) is None:
-            await ctx.send(f"Unknown command, run !{game.name} help for available commands")
-            return
-        await RNGCmdHandler.commands_dict[command](game, ctx, argv)
+        pass
 
     @staticmethod
     async def inv_args_message(game: RNGGame, ctx: commands.Context):
@@ -364,19 +360,14 @@ class RNGCmdHandler(ABC, CommandHandler):
         if len(argv) > 2:
             await RNGCmdHandler.inv_args_message(game, ctx)
             return
-        try:
-            bet: int = int(argv[1])
-        except ValueError:
-            await ctx.send(f"Invalid format of bet, insert whole number")
-            return
-        cmd_status: E = game.add_player(ctx.author.id, ctx.author.display_name, bet)
+        cmd_status: E = game.add_player(ctx.author.id, ctx.author.display_name)
         if cmd_status == E.INV_PLAYER:
             await ctx.send(f"Player {ctx.message.author.mention} is already in-game")
             return
         if cmd_status == E.INSUFFICIENT_FUNDS:
             await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your server balance!")
             return
-        await ctx.send(f"Player {ctx.author.display_name} has successfully joined the game with balance {game.players[ctx.author.id].balance}\n{ctx.message.author.mention} The in-game balance was deducted from your global balance and will be returned when you leave using !{game.name} leave")
+        await ctx.send(f"Player {ctx.author.display_name} has successfully joined the game! You can now place bets with !{game.name} bet!")
 
     @staticmethod
     async def command_leave(game: RNGGame, ctx: commands.Context, argv: list[str]):
@@ -387,34 +378,16 @@ class RNGCmdHandler(ABC, CommandHandler):
 
     @staticmethod
     async def command_bet(game: RNGGame, ctx: commands.Context, argv: list[str]):
-        if len(argv) != 3:
-            await RNGCmdHandler.inv_args_message(game, ctx)
-            return
-        try:
-            number = int(argv[1])
-            bet = int(argv[2])
-        except ValueError:
-            await ctx.send(f"Invalid format of the command, both number and the value of the bet must be whole numbers.")
-            return
-        cmd_status: E = game.place_bet(ctx.author.id, bet, number, (game.highest - game.lowest + 1))
-        if cmd_status == E.INV_PLAYER:
-            ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join [balance] to participate")
-        if cmd_status == E.OUT_OF_RANGE:
-            await ctx.send(f"{ctx.message.author.mention} The number you want to bet on is out of the valid range. Bet on a number between {game.lowest} and {game.highest}")
-            return
-        if cmd_status == E.INSUFFICIENT_FUNDS:
-            await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your in-game balance. Try again with less or re-join the game with higher balance!")
-            return
-        await ctx.send(f"Player {ctx.author.display_name} has successfully bet {bet} on number {number}")
+        pass
 
     @staticmethod
     async def command_ready(game: RNGGame, ctx: commands.Context, argv: list[str]):
         cmd_status: E = game.ready_up(ctx.author.id)
         if cmd_status == E.INV_PLAYER:
-            ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join [balance] to participate")
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
             return
         if cmd_status == E.INV_STATE:
-            ctx.send(f"{ctx.message.author.mention} You are already ready for the roll!")
+            await ctx.send(f"{ctx.message.author.mention} You are already ready for the roll!")
             return
         await ctx.send(f"Player {ctx.author.display_name} is ready for the roll!")
         if game.check_ready():
@@ -426,7 +399,7 @@ class RNGCmdHandler(ABC, CommandHandler):
     async def command_unready(game: RNGGame, ctx: commands.Context, argv: list[str]):
         cmd_status: E = game.unready(ctx.author.id)
         if cmd_status == E.INV_PLAYER:
-            ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join [balance] to participate")
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
             return
         await ctx.send(f"Player {ctx.author.display_name} needs more time to think and is now not ready")
 
@@ -440,17 +413,83 @@ class RNGCmdHandler(ABC, CommandHandler):
         game.restart_game()
         await ctx.send(f"The game has been restarted, bet and try your luck again!")
 
-    commands_dict = {
+    @staticmethod
+    async def command_help(game: RNGGame, ctx: commands.Context, argv: list[str]):
+        await ctx.send("Please use !help [game] to display the help dialog")
+
+    @staticmethod
+    async def command_status(game: RNGGame, ctx: commands.Context, argv: list[str]):
+        if not game.check_valid_player(ctx.author.id):
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+            return
+        message = game.get_status_msg()
+        await ctx.send(f"```{message}```")
+    
+    @staticmethod
+    async def command_betlist(game: RNGGame, ctx: commands.Context, argv: list[str]):
+        if not game.check_valid_player(ctx.author.id):
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+            return
+        message = game.get_bets_msg()
+        if message is None:
+            await ctx.send("An error occured listing the bets")
+            return
+        await ctx.send(f"```{message}```")
+
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
             "join": command_join,
             "bet": command_bet,
             "leave": command_leave,
             "ready": command_ready,
             "unready": command_unready,
-            "roll": command_roll
+            "help": command_help,
+            "status": command_status,
+            "betlist": command_betlist
         }
     
 class CoinflipCmdHandler(RNGCmdHandler):
-    pass
+
+    # Override
+    @staticmethod
+    async def command_run(game: Coinflip, ctx: commands.Context, argv: list[str]):
+        command = argv[0]
+        if CoinflipCmdHandler.commands_dict.get(command, None) is None:
+            if RNGCmdHandler.commands_dict.get(command, None) is None:
+                await ctx.send(f"Unknown command, run !help {game.name} for available commands")
+                return
+            await RNGCmdHandler.commands_dict[command](game, ctx, argv)
+            return
+        await CoinflipCmdHandler.commands_dict[command](game, ctx, argv)
+
+    # Override
+    @staticmethod 
+    async def command_bet(game: Coinflip, ctx, argv):
+        if len(argv) != 3:
+            await RNGCmdHandler.inv_args_message(game, ctx)
+            return
+        if argv[1] == "heads":
+            number = int(CoinflipSides.HEADS)
+        elif argv[1] == "tails":
+            number = int(CoinflipSides.TAILS)
+        else:
+            await ctx.send(f"{ctx.author.mention} You passed an invalid bet, type !{game.name} bet [heads/tails] [amount] to place a bet")
+            return
+        try:
+            bet = int(argv[2])
+        except ValueError:
+            await ctx.send(f"Invalid format of the command, both number and the value of the bet must be whole numbers.")
+            return
+        cmd_status: E = game.place_bet(ctx.author.id, bet, number, (game.highest - game.lowest + 1))
+        if cmd_status == E.INV_PLAYER:
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+        if cmd_status == E.INSUFFICIENT_FUNDS:
+            await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your balance. Try again with less!")
+            return
+        await ctx.send(f"Player {ctx.author.display_name} has successfully bet {bet} on {argv[1]}")
+
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
+        "bet": command_bet
+    }
 
 class RollTheDiceCmdHandler(RNGCmdHandler):
     pass

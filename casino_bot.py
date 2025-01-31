@@ -240,6 +240,20 @@ async def baccarat(ctx, *, arg_str):
 # command coinflip
 @bot.command(name='coinflip', aliases=["cf"])
 async def coinflip(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Coinflip!
+
+    Coinflip commands:
+    * cf create - creates a new game of coinflip
+    * cf exit - removes existing game of coinflip from the current room
+    * cf join - joins an existing game
+    * cf leave - leaves the game you participate in
+    * cf bet [heads/tails] [amount] - places a bet of "amount" on the selected option
+    * cf ready - sets a player ready to flip the coin
+    * cf unready - unsets the ready status
+    * cf status - displays the status of the game
+    * cf bets - displays all currently placed bets
+    """
     argv = arg_str.split(' ')
     if (len(argv) < 1):
         await ctx.send(f"No argument, run !cf help for available commands")

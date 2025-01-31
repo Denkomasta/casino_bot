@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
 from discord.ext import commands
-from enums import E, GameType
+from enums import E, GameType, CoinflipSides
 from typing import Callable, Awaitable
 from database import Database
 from base_classes import Game
@@ -10,12 +10,10 @@ from base_classes import Game
 class RNGPlayer:
     player_id: int
     name: str
-    balance: int
     ready: bool
-    def __init__(self, player_id: int, name: str, balance: int):
+    def __init__(self, player_id: int, name: str):
         self.player_id = player_id
         self.name = name
-        self.balance = balance
         self.ready = False
 
 class Bet:
@@ -29,7 +27,7 @@ class Bet:
         self.odd = odd
         self.possible_winning = self.bet * self.odd
 
-class RNGGame(Game):
+class RNGGame(Game, ABC):
     name: str
     lowest: int
     highest: int
@@ -37,7 +35,6 @@ class RNGGame(Game):
     players: dict[int, RNGPlayer]
     last_roll: int | None
     database: Database
-    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]]
     def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType):
         super().__init__(database, gametype)
         self.database = database
@@ -48,21 +45,15 @@ class RNGGame(Game):
         self.players = dict()
         self.last_roll = None
 
-    def add_player(self, player_id: int, name: str, balance: int = 1) -> E:
+    def add_player(self, player_id: int, name: str) -> E:
         if self.players.get(name, None) is not None:
             return E.INV_PLAYER
-        if balance > self.database.get_player_balance(player_id):
-            return E.INSUFFICIENT_FUNDS
-        
-        self.database.change_player_balance(player_id, -balance)
-        self.players[player_id] = RNGPlayer(player_id, name, balance)
+        self.players[player_id] = RNGPlayer(player_id, name)
         return E.SUCCESS
 
     def remove_player(self, player_id: int) -> E:
         if self.players.get(player_id, None) is None:
             return E.INV_PLAYER
-        
-        self.database.change_player_balance(player_id, self.players[player_id].balance)
         self.players.pop(player_id)
         return E.SUCCESS
     
@@ -71,12 +62,11 @@ class RNGGame(Game):
             return E.INV_PLAYER
         if number < self.lowest or number > self.highest:
             return E.OUT_OF_RANGE
-        if bet > self.players[player_id].balance:
-            return E.INSUFFICIENT_FUNDS
-        
+        if bet > self.database.get_player_balance(player_id):
+            return E.INSUFFICIENT_FUNDS       
         new_bet = Bet(self.players[player_id], bet, odd)
         self.bets[number].append(new_bet)
-        new_bet.player.balance -= bet
+        self.database.change_player_balance(player_id, -bet)
         return E.SUCCESS
     
     def ready_up(self, player_id: int) -> E:
@@ -114,7 +104,7 @@ class RNGGame(Game):
             if self.players.get(bet.player.player_id, None) is None:
                 retval = E.INV_PLAYER
                 continue
-            bet.player.balance += bet.possible_winning
+            self.database.change_player_balance(bet.player.player_id, bet.possible_winning)
         return retval
     
     def build_winners_message(self, winning_bets: list[Bet]) -> str:
@@ -131,9 +121,43 @@ class RNGGame(Game):
         for player in self.players.values():
             player.ready = False
 
+    def check_valid_player(self, player_id: int):
+        return (self.players.get(player_id, None) is not None)
+
+    def get_status_msg(self):
+        message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
+        for player in self.players.values():
+            message += (player.name + " - " + ("Ready" if player.ready else "Not ready") + "\n")
+        return message + "The game will start rolling automatically after everyone is ready!"
+
+    @abstractmethod
+    def get_bets_msg(self):
+        pass
+
 class Coinflip(RNGGame):
     def __init__(self, data: Database):
         super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP)
+    
+    # Override
+    def get_bets_msg(self):
+        message = f"Current bets are as follows:\n" + 25 * '-' + '\n'
+        try:
+            message += "HEADS: " + self.list_bets(CoinflipSides.HEADS) + "\n"
+            message += "TAILS: " + self.list_bets(CoinflipSides.TAILS) + "\n"
+        except ValueError:
+            return None
+        return message
+    
+    def list_bets(self, number):
+        bet_list = self.bets.get(int(number))
+        message = ""
+        if bet_list is None:
+            raise ValueError
+        for i, bet in enumerate(bet_list):
+            if i > 0:
+                message += ", "
+            message += f"({bet.player.name}, {bet.bet})"
+        return message
 
 class RollTheDice(RNGGame):
     def __init__(self, data: Database):
