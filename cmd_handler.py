@@ -6,6 +6,7 @@ from blackjack.black_jack import BlackJack
 from baccarat.baccarat import Baccarat
 from rng_games.rng_games import RNGGame, Bet, Coinflip, RollTheDice, GuessTheNumber
 from abc import ABC, abstractmethod
+from database import Database
 
 import discord
 
@@ -42,7 +43,50 @@ class CommandHandler:
             return source.user
         else:
             return source.author
-        
+    
+    @staticmethod
+    async def play(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+        options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
+        if len(options) == 0:
+            from ui import CreateUI
+            await source.channel.send("There is no existing game in the channel currently", view=CreateUI(games, data, channel_id=CommandHandler.get_id(source)))
+            return
+        from ui import PlayUI
+        await source.channel.send(view=PlayUI(games, options=options))
+
+    @staticmethod
+    async def create(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+        options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
+        if len(options) == 0:
+            from ui import PlayUI
+            await source.channel.send("All types of games already exists in this channel", view=PlayUI(games, channel_id=CommandHandler.get_id(source)))
+            return
+        from ui import CreateUI
+        await source.channel.send(view=CreateUI(games, data, options=options))
+
+    @staticmethod
+    async def cmd_create(source: commands.Context | discord.Interaction, games: dict[(int, int), Game], data: Database, type: GameType):
+        if ((CommandHandler.get_id(source), type) in games.keys()):
+            await CommandHandler.send(f'Game already exists in your channel, use \'exit\' first', source)
+            return
+        game: Game
+        match type:
+            case GameType.BACCARAT:
+                game = Baccarat(data, source.channel)
+            case GameType.BLACKJACK:
+                game = BlackJack(data, source.channel)
+            case GameType.COINFLIP:
+                game = Coinflip(data, source.channel)
+            case GameType.ROLLTHEDICE:
+                game = RollTheDice(data, source.channel)
+            case _:
+                await CommandHandler.send("Not implemented yet", source)
+                return
+        games[(source.channel.id, type)] = game
+        await CommandHandler.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'', source)
+        from ui import JoinUI
+        await source.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
+
 
     @staticmethod
     async def cmd_join(game: Game, source: commands.Context | discord.Interaction, args: list[str]):

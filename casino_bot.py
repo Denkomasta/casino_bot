@@ -11,8 +11,9 @@ from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 from baccarat.baccarat import Baccarat
 from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from base_classes import Game
+from cmd_handler import CommandHandler
 from enums import GameType
-from ui import JoinUI
+from ui import JoinUI, PlayUI, CreateUI
 from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 
@@ -54,6 +55,20 @@ async def debug(ctx):
     game.evaluate()
     results = game.show_results()
     await ctx.send(f'show_cards1 =\n{show_card1}\nshow_cards2 =\n{show_card2}\nshow_cards3 =\n{show_card3}\nresults =\n{results}')
+
+# command for playing
+@bot.command(name='play', help='Choose game to play')
+async def play(ctx: commands.Context):
+    global Games
+    global Data
+    await CommandHandler.play(ctx, Games, Data)
+
+# command for creating
+@bot.command(name='create', help='Choose game to create')
+async def create(ctx: commands.Context):
+    global Games
+    global Data
+    await CommandHandler.create(ctx, Games, Data)
 
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
