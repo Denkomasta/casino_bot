@@ -562,11 +562,12 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
     @staticmethod
     async def subcommand_roll(game: RollTheDice, ctx, argv):
         winning_bets: list[Bet] = game.roll()
-        await ctx.send(game.build_conclusion_message(winning_bets))
+        conclusion_message = game.build_conclusion_message(winning_bets) + 25 * '-' + '\n'
         if game.give_winnings(winning_bets) == E.INV_PLAYER:
-            await ctx.send(f"One or more players could not collect their winning because they left the game :(")
+           conclusion_message += f"One or more players could not collect their winning because they left the game :(\n"
         game.restart_game()
-        await ctx.send(f"The game has been restarted, bet and try your luck again!")
+        conclusion_message += f"The game has been restarted, bet and try your luck again!"
+        await ctx.send(f"```{conclusion_message}```")
 
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
         "bet": command_bet,

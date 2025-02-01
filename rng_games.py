@@ -281,7 +281,7 @@ class RollTheDice(RNGGame):
         return winning_bets
     
     def build_conclusion_message(self, winning_bets: list[Bet]):
-        message = "Dices are on the table and the result is:\n"
+        message = "Dice are on the table and the result is:\n"
         message += Ascii.draw_dice([self.last_dice1, self.last_dice2])
         message += f"We got a sum of {self.last_roll}!"
         if self.last_dice1 == self.last_dice2:
@@ -296,7 +296,14 @@ class RollTheDice(RNGGame):
                 continue
             message += f"Sum of {sum}: " + self.list_bets(sum) + "\n"
         for doubles in range(1, 7):
-            if len(self.bets[-doubles] == 0):
+            if len(self.bets[-doubles]) == 0:
                 continue
             message += f"Double {doubles}s: " + self.list_bets(-doubles) + "\n"
         return message
+    
+    def restart_game(self):
+        self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
+        for number in range(-1, -7, -1):
+            self.bets[number] = []
+        for player in self.players.values():
+            player.ready = False
