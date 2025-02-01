@@ -3,8 +3,10 @@ import traceback
 from discord.ext import commands
 from base_classes import Game, Player, Bet
 from enums import BaccaratBetType, GameType, E, GameState, PlayerState
-from baccarat import BaccaratPlayer, BaccaratBet
-from cmd_handler import BaccaratCmdHandler, CommandHandler, BlackJackCmdHandler
+from baccarat.baccarat import BaccaratPlayer, BaccaratBet
+from cmd_handler import CommandHandler
+from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
+from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 
 class UI(discord.ui.View):
     game: Game
@@ -25,6 +27,7 @@ class JoinUI(UI):
         bet_ui: BetUI
         match self.type:
             case GameType.BACCARAT:
+                from baccarat.ui_baccarat import BaccaratBetUI
                 bet_ui = BaccaratBetUI(self.game)
             case _:
                 bet_ui = BetUI(self.game)
@@ -77,36 +80,7 @@ class BetUI(UI):
     @discord.ui.button(label="SET BET AMOUNT", style=discord.ButtonStyle.blurple)
     async def handle_bet_amount(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(BetModal(self.game))
-        
-
-class BaccaratBetUI(UI):
-
-    def __init__(self, game: Game):
-        super().__init__(game)
-        self.bet_type: str | None = None
-        
-    @discord.ui.select(
-        placeholder="Choose your bet type...",
-        options=[
-            discord.SelectOption(label="Player", value=f"player"),
-            discord.SelectOption(label="Banker", value=f"banker"),
-            discord.SelectOption(label="Tie", value=f"tie"),
-        ],
-    )
-    async def handle_bet_type(self, interaction: discord.Interaction, select: discord.ui.Select):
-        self.bet_type = select.values[0]
-        if interaction.user.id in self.game.players.keys():
-            await BaccaratCmdHandler.cmd_bet(self.game, interaction, ["bet", f"{self.game.players[interaction.user.id].bet.value}", self.bet_type])
-        await interaction.response.send_message("Selected succesfully", ephemeral=True, delete_after=1)
-
     
-    @discord.ui.button(label="SET BET AMOUNT", style=discord.ButtonStyle.blurple)
-    async def handle_bet_amount(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.bet_type is None:
-            await interaction.response.send_message(f"Choose a bet type!", ephemeral=True)
-            return
-        await interaction.response.send_modal(BaccaratBetModal(self.game, self.bet_type))
-
 
 class BetModal(discord.ui.Modal, title="Place Your Bet"):
 
@@ -127,37 +101,3 @@ class BetModal(discord.ui.Modal, title="Place Your Bet"):
             await interaction.response.send_message(view=ReadyUI(self.game), ephemeral=True)
         else:
             await CommandHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value])
-
-
-
-class BaccaratBetModal(BetModal):
-
-    def __init__(self, game: Game, type: str):
-        super().__init__(game)
-        self.bet_type = type
-    
-    async def on_submit(self, interaction: discord.Interaction):
-        if interaction.user.id not in self.game.players.keys():
-            await BaccaratCmdHandler.cmd_join(self.game, interaction, ["join", self.bet_amount.value, self.bet_type])
-            await interaction.response.send_message(view=ReadyUI(self.game), ephemeral=True)
-        else:
-            await BaccaratCmdHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value, self.bet_type])
-
-
-class BlackJackHitStandUI(UI):
-    def __init__(self, game: Game):
-        super().__init__(game)
-
-    @discord.ui.button(label="HIT", style=discord.ButtonStyle.green)
-    async def handle_hit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await BlackJackCmdHandler.cmd_hit(self.game, interaction, ["hit"])
-        if self.game.players[interaction.user.id].state == PlayerState.PLAYING:
-            await interaction.response.send_message("What si your next move?", view=BlackJackHitStandUI(self.game), ephemeral=True)
-        else:
-            await interaction.response.send_message("You cannot hit anymore")
-
-
-    @discord.ui.button(label="STAND", style=discord.ButtonStyle.red)
-    async def handle_stand(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await BlackJackCmdHandler.cmd_stand(self.game, interaction, ["stand"])
-        await interaction.response.send_message("You STAND", ephemeral=True, delete_after=1)
