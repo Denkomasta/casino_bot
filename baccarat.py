@@ -1,5 +1,5 @@
 from base_classes import CardGame, Bet, Card, Player, CardPlayer
-from enums import BaccaratBetType, CardSuits, GameType, GameState, PlayerResult, PlayerState
+from enums import BaccaratBetType, CardSuits, GameType, GameState, PlayerResult, PlayerState, E
 from random import randrange
 import discord
 
@@ -39,8 +39,8 @@ class Baccarat(CardGame):
     banker: BaccaratFigure
     player: BaccaratFigure
 
-    def __init__(self, data):
-        super().__init__(data, GameType.BACCARAT)
+    def __init__(self, data, channel: discord.TextChannel):
+        super().__init__(data, channel, GameType.BACCARAT)
         self.banker = BaccaratFigure()
         self.player = BaccaratFigure()
     
@@ -108,9 +108,11 @@ class Baccarat(CardGame):
                     show += f"{player.player_info.name}: Draw. Your bet of {player.bet.value} has been returned.\n"
         return show
 
-    def change_bet(self, player_info: discord.User | discord.Member, bet: int, type: int) -> None:
-        self.players[player_info.id].bet.value = bet
+    def change_bet(self, player_info: discord.User | discord.Member, bet: int, type: int) -> E:
+        if super().change_bet(player_info, bet) == E.INSUFFICIENT_FUNDS:
+            return E.INSUFFICIENT_FUNDS
         self.players[player_info.id].bet.type = type
+        return E.SUCCESS
 
     def round_restart(self):
         self.deck = self.get_new_deck()
@@ -123,3 +125,9 @@ class Baccarat(CardGame):
             player.state = PlayerState.NOT_READY
             player.bet.result = PlayerResult.UNDEFINED
             player.bet.winning = 0
+        self.collect_bets()
+
+
+    def add_player(self, player_info: discord.Member | discord.User, bet: int, type: int):
+        super().add_player(player_info, bet)
+        self.players[player_info.id].bet.type = type
