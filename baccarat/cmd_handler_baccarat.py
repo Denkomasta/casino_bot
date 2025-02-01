@@ -81,7 +81,8 @@ class BaccaratCmdHandler(CommandHandler):
         game.give_winnings()
         await game.channel.send(f"```\n{game.show_game()}\n{game.show_results()}```")
         game.round_restart()
-        from ui import ReadyUI, BaccaratBetUI, JoinLeaveUI
+        from ui import ReadyUI, JoinLeaveUI
+        from baccarat.ui_baccarat import BaccaratBetUI
         await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.BACCARAT))
         await game.channel.send("Do you want to change your bet??", view=BaccaratBetUI(game))
         await game.channel.send("Are you ready for the next game?", view=ReadyUI(game))

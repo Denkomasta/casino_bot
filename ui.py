@@ -24,14 +24,19 @@ class JoinUI(UI):
 
     @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple)
     async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):
-        bet_ui: BetUI
-        match self.type:
-            case GameType.BACCARAT:
-                from baccarat.ui_baccarat import BaccaratBetUI
-                bet_ui = BaccaratBetUI(self.game)
-            case _:
-                bet_ui = BetUI(self.game)
-        await interaction.response.send_message(view=bet_ui, ephemeral=True)
+        try:
+            bet_ui: BetUI
+            match self.type:
+                case GameType.BACCARAT:
+                    from baccarat.ui_baccarat import BaccaratBetUI
+                    bet_ui = BaccaratBetUI(self.game)
+                case _:
+                    bet_ui = BetUI(self.game)
+            
+            await interaction.response.send_message(view=bet_ui, ephemeral=True)
+        except Exception as e:
+            print("Exception:", e)
+            traceback.print_exc()
 
 class JoinLeaveUI(JoinUI):
     def __init__(self, game: Game, type: GameType):

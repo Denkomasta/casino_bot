@@ -46,7 +46,7 @@ class BlackJackCmdHandler(CommandHandler):
             await BlackJackCmdHandler.blackjack_finish(game, source)
             return
         else:
-            from ui import BlackJackHitStandUI
+            from blackjack.ui_blackjack import BlackJackHitStandUI
             await game.channel.send(view=BlackJackHitStandUI(game))
 
     @staticmethod

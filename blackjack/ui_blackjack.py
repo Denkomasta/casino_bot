@@ -5,7 +5,7 @@ from base_classes import Game, Player, Bet
 from enums import BaccaratBetType, GameType, E, GameState, PlayerState
 from baccarat.baccarat import BaccaratPlayer, BaccaratBet
 from ui import UI
-from cmd_handler_blackjack import BlackJackCmdHandler
+from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 
 class BlackJackHitStandUI(UI):
     def __init__(self, game: Game):

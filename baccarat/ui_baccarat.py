@@ -4,7 +4,7 @@ from discord.ext import commands
 from base_classes import Game, Player, Bet
 from enums import BaccaratBetType, GameType, E, GameState, PlayerState
 from baccarat.baccarat import BaccaratPlayer, BaccaratBet
-from cmd_handler_baccarat import BaccaratCmdHandler
+from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from ui import UI, ReadyUI, BetModal
 
 class BaccaratBetUI(UI):
