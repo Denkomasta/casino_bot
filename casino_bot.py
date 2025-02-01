@@ -13,6 +13,7 @@ from base_classes import Game
 from enums import GameType
 from ui import JoinUI
 from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber
+from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
