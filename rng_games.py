@@ -307,3 +307,13 @@ class RollTheDice(RNGGame):
             self.bets[number] = []
         for player in self.players.values():
             player.ready = False
+#              ││
+#              \/
+#            │ 47 │
+#       │ 56 │BLCK│
+#  │ 24 │RED-│    │
+#  │BLCK│
+# 
+# 
+# 
+# 
