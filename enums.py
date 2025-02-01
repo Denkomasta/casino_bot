@@ -52,3 +52,11 @@ class BaccaratBetType:
 class CoinflipSides(IntEnum):
     HEADS = 1
     TAILS = 2
+
+class RTDDoubles(IntEnum):
+    ONES = -1
+    TWOS = -2
+    THREES = -3
+    FOURS = -4
+    FIVES = -5
+    SIXES = -6

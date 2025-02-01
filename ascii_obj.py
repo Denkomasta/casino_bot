@@ -394,4 +394,58 @@ class Ascii:
             return Ascii.cards[(CardSuits.UNSHOWABLE, -1)]
         return Ascii.cards[(suit, value)]
 
-    
+    dice: dict[int, list[str]] = {
+        1: [
+            "┌─────────┐",
+            "│         │",
+            "│    O    │",
+            "│         │",
+            "└─────────┘"
+        ],
+        2: [
+            "┌─────────┐",
+            "│ O       │",
+            "│         │",
+            "│       O │",
+            "└─────────┘"
+        ],
+        3: [
+            "┌─────────┐",
+            "│ O       │",
+            "│    O    │",
+            "│       O │",
+            "└─────────┘"
+        ],
+        4: [
+            "┌─────────┐",
+            "│ O     O │",
+            "│         │",
+            "│ O     O │",
+            "└─────────┘"
+        ],
+        5: [
+            "┌─────────┐",
+            "│ O     O │",
+            "│    O    │",
+            "│ O     O │",
+            "└─────────┘"
+        ],
+        6: [
+            "┌─────────┐",
+            "│ O     O │",
+            "│ O     O │",
+            "│ O     O │",
+            "└─────────┘"
+        ]
+    }
+
+    def draw_dice(numbers: list[int]) -> str:
+        picture = ""
+        if len(numbers) <= 0:
+            return ""
+        for line in range(5):
+            for number in numbers:
+                current_dice = Ascii.dice[number]
+                picture += current_dice[line]
+            picture += '\n'
+        return picture

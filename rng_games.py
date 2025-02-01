@@ -2,10 +2,11 @@ from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
 from discord.ext import commands
-from enums import E, GameType, CoinflipSides
+from enums import E, GameType, CoinflipSides, RTDDoubles
 from typing import Callable, Awaitable, Type
 from database import Database
 from base_classes import Game
+from ascii_obj import Ascii
 
 class RNGPlayer:
     player_id: int
@@ -64,12 +65,14 @@ class RNGGame(Game, ABC):
             return E.OUT_OF_RANGE
         if bet_amount > self.database.get_player_balance(player_id):
             return E.INSUFFICIENT_FUNDS
+
         existing_bet = self.find_duplicite_bet(player_id, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
             self.database.change_player_balance(player_id, -bet_amount)
             return E.DUPLICITE_BET
+
         new_bet = Bet(self.players[player_id], bet_amount, odd)
         self.bets[number].append(new_bet)
         self.database.change_player_balance(player_id, -bet_amount)
@@ -179,6 +182,17 @@ class RNGGame(Game, ABC):
     def get_bets_msg(self):
         pass
 
+    def list_bets(self, number):
+        bet_list = self.bets.get(int(number))
+        message = ""
+        if bet_list is None:
+            raise ValueError
+        for i, bet in enumerate(bet_list):
+            if i > 0:
+                message += ", "
+            message += f"({bet.player.name}, {bet.bet})"
+        return message
+
 class Coinflip(RNGGame):
     def __init__(self, data: Database):
         super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP)
@@ -191,17 +205,6 @@ class Coinflip(RNGGame):
             message += "TAILS: " + self.list_bets(CoinflipSides.TAILS) + "\n"
         except ValueError:
             return None
-        return message
-    
-    def list_bets(self, number):
-        bet_list = self.bets.get(int(number))
-        message = ""
-        if bet_list is None:
-            raise ValueError
-        for i, bet in enumerate(bet_list):
-            if i > 0:
-                message += ", "
-            message += f"({bet.player.name}, {bet.bet})"
         return message
 
 class GuessTheNumber(RNGGame):
@@ -217,4 +220,83 @@ class GuessTheNumber(RNGGame):
 
 class RollTheDice(RNGGame):
     def __init__(self, data: Database):
-        super().__init__(data, "dice", 1, 6, GameType.ROLLTHEDICE)
+        self.rates : dict[int, float]
+        self.last_dice1: int
+        self.last_dice2: int
+        super().__init__(data, "rtd", 2, 12, GameType.ROLLTHEDICE)
+        for number in range(-1, -7, -1):
+            self.bets[number] = []
+        self.rates = {
+            2 : 36,
+            3 : 18,
+            4 : 12,
+            5 : 9,
+            6 : 7.2,
+            7 : 6,
+            8 : 7.2,
+            9 : 9,
+            10 : 12,
+            11 : 18,
+            12 : 36,
+            int(RTDDoubles.ONES) : 36,
+            int(RTDDoubles.TWOS) : 36,
+            int(RTDDoubles.THREES) : 36,
+            int(RTDDoubles.FOURS) : 36,
+            int(RTDDoubles.FIVES) : 36,
+            int(RTDDoubles.SIXES) : 36
+        }
+    
+    def get_rate(self, number):
+        return self.rates.get(number)
+    
+    # Override
+    def place_bet(self, player_id: int, bet_amount: int, number: int, odd: float) -> E:
+        if self.players.get(player_id, None) is None:
+            return E.INV_PLAYER
+        if number < -6 or number in [0, 1] or number > 12:
+            return E.OUT_OF_RANGE
+        if bet_amount > self.database.get_player_balance(player_id):
+            return E.INSUFFICIENT_FUNDS
+
+        existing_bet = self.find_duplicite_bet(player_id, number)
+        if existing_bet is not None:
+            existing_bet.bet += bet_amount
+            existing_bet.possible_winning = bet_amount * odd
+            self.database.change_player_balance(player_id, -bet_amount)
+            return E.DUPLICITE_BET
+
+        new_bet = Bet(self.players[player_id], bet_amount, odd)
+        self.bets[number].append(new_bet)
+        self.database.change_player_balance(player_id, -bet_amount)
+        return E.SUCCESS
+    
+    # Override
+    def roll(self) -> list[Bet]:
+        self.last_dice1: int = randrange(1, 7)
+        self.last_dice2: int = randrange(1, 7)
+        self.last_roll = self.last_dice1 + self.last_dice2
+        winning_bets = self.bets[self.last_roll]
+        if self.last_dice1 == self.last_dice2:
+            winning_bets.extend(self.bets[-self.last_dice1])
+        return winning_bets
+    
+    def build_conclusion_message(self, winning_bets: list[Bet]):
+        message = "Dices are on the table and the result is:\n"
+        message += Ascii.draw_dice([self.last_dice1, self.last_dice2])
+        message += f"We got a sum of {self.last_roll}!"
+        if self.last_dice1 == self.last_dice2:
+            message += f"On top of that, we got DOUBLE {self.last_dice1}"
+        message += '\n' + self.build_winners_message(winning_bets) + '\n'
+        return message
+    
+    def get_bets_msg(self):
+        message = f"Current bets are as follows:\n" + 25 * '-' + '\n'
+        for sum in range(2, 13):
+            if len(self.bets[sum]) == 0:
+                continue
+            message += f"Sum of {sum}: " + self.list_bets(sum) + "\n"
+        for doubles in range(1, 7):
+            if len(self.bets[-doubles] == 0):
+                continue
+            message += f"Double {doubles}s: " + self.list_bets(-doubles) + "\n"
+        return message

@@ -353,7 +353,7 @@ class RNGCmdHandler(CommandHandler):
 
     @staticmethod
     async def inv_args_message(game: RNGGame, ctx: commands.Context):
-        await ctx.send(f"Invalid number of arguments, run !{game.name} help for available commands")
+        await ctx.send(f"Invalid arguments, run !{game.name} help for available commands")
 
     @staticmethod
     async def command_join(game: RNGGame, ctx: commands.Context, argv: list[str]):
@@ -400,7 +400,7 @@ class RNGCmdHandler(CommandHandler):
         await ctx.send(f"Player {ctx.author.display_name} needs more time to think and is now not ready")
 
     @staticmethod
-    async def command_roll(game: RNGGame, ctx: commands.Context, argv: list[str]):
+    async def subcommand_roll(game: RNGGame, ctx: commands.Context, argv: list[str]):
         winning_bets: list[Bet] = game.roll()
         await ctx.send(f"The winning number is: {game.last_roll}!")
         await ctx.send(game.build_winners_message(winning_bets))
@@ -444,7 +444,6 @@ class RNGCmdHandler(CommandHandler):
         }
     
 class CoinflipCmdHandler(RNGCmdHandler):
-
     # Override
     @staticmethod
     async def command_run(game: Coinflip, ctx: commands.Context, argv: list[str]):
@@ -492,11 +491,11 @@ class CoinflipCmdHandler(RNGCmdHandler):
         await RNGCmdHandler.command_ready(game, ctx, argv)
         if game.check_ready():
             await ctx.send("All players are ready! Rolling!")
-            await CoinflipCmdHandler.command_roll(game, ctx, argv)
+            await CoinflipCmdHandler.subcommand_roll(game, ctx, argv)
 
     #Override
     @staticmethod
-    async def command_roll(game, ctx, argv):
+    async def subcommand_roll(game, ctx, argv):
         winning_bets: list[Bet] = game.roll()
         side = "HEADS" if CoinflipSides(game.last_roll) == CoinflipSides.HEADS else "TAILS"
         await ctx.send(f"The winning side is: {side}!")
@@ -508,12 +507,71 @@ class CoinflipCmdHandler(RNGCmdHandler):
 
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
         "bet": command_bet,
-        "roll": command_roll,
         "ready": command_ready
     }
 
 class RollTheDiceCmdHandler(RNGCmdHandler):
-    pass
+    # Override
+    @staticmethod
+    async def command_run(game: RollTheDice, ctx: commands.Context, argv: list[str]):
+        command = argv[0]
+        if RollTheDiceCmdHandler.commands_dict.get(command, None) is None:
+            if RNGCmdHandler.commands_dict.get(command, None) is None:
+                await ctx.send(f"Unknown command, run !help {game.name} for available commands")
+                return
+            await RNGCmdHandler.commands_dict[command](game, ctx, argv)
+            return
+        await RollTheDiceCmdHandler.commands_dict[command](game, ctx, argv)
+
+    @staticmethod
+    async def command_bet(game: RollTheDice, ctx, argv):
+        if len(argv) != 4 or argv[1] not in ["sum", "doubles"]:
+            await RNGCmdHandler.inv_args_message(game, ctx)
+            return
+        try:
+            bet_type = argv[1]
+            input_number = int(argv[2])
+            bet = int(argv[3])
+        except ValueError:
+            await ctx.send(f"Invalid format of the command, both selected sum/number for doubles and the value of the bet must be whole numbers.")
+            return
+        number = -input_number if bet_type == "doubles" else input_number
+        cmd_status: E = game.place_bet(ctx.author.id, bet, number, game.get_rate(number))
+        if cmd_status == E.INV_PLAYER:
+            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+        if cmd_status == E.OUT_OF_RANGE:
+            await ctx.send(f"{ctx.message.author.mention} The number you have written is out of range, bet on sums between 2 and 12 or on doubles")
+        if cmd_status == E.INSUFFICIENT_FUNDS:
+            await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your balance. Try again with less!")
+            return
+        bet_type_message = "sum of" if bet_type == "sum" else "double"
+        if cmd_status == E.DUPLICITE_BET:
+            await ctx.send(f"Player {ctx.author.display_name} has successfully bet another {bet} on {bet_type_message} {str(input_number)}")
+            return
+        await ctx.send(f"Player {ctx.author.display_name} has successfully bet {bet} on {bet_type_message} {str(input_number)}")
+    
+    #Override
+    @staticmethod
+    async def command_ready(game, ctx, argv):
+        await RNGCmdHandler.command_ready(game, ctx, argv)
+        if game.check_ready():
+            await ctx.send("All players are ready! Rolling!")
+            await RollTheDiceCmdHandler.subcommand_roll(game, ctx, argv)
+
+    #Override
+    @staticmethod
+    async def subcommand_roll(game: RollTheDice, ctx, argv):
+        winning_bets: list[Bet] = game.roll()
+        await ctx.send(game.build_conclusion_message(winning_bets))
+        if game.give_winnings(winning_bets) == E.INV_PLAYER:
+            await ctx.send(f"One or more players could not collect their winning because they left the game :(")
+        game.restart_game()
+        await ctx.send(f"The game has been restarted, bet and try your luck again!")
+
+    commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
+        "bet": command_bet,
+        "ready": command_ready
+    }
 
 class GuessNumberCmdHandler(RNGCmdHandler):
 
@@ -522,10 +580,10 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         await RNGCmdHandler.command_ready(game, ctx, argv)
         if game.check_ready():
             await ctx.send("All players are ready! Evaluating!")
-            await GuessNumberCmdHandler.command_roll(game, ctx, argv)
+            await GuessNumberCmdHandler.subcommand_roll(game, ctx, argv)
     
     @staticmethod
-    async def command_roll(game: GuessTheNumber, ctx, argv):
+    async def subcommand_roll(game: GuessTheNumber, ctx, argv):
         winning_number = game.last_roll
         if winning_number is None:
             game.roll()

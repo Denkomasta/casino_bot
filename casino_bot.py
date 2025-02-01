@@ -265,7 +265,7 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
         Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(Data)
-        await ctx.send(f"Game was created, join the game using \'join -balance-\'")
+        await ctx.send(f"Game was created, join the game using \'join\'")
         return
     if (argv[0] == "exit"):
         if ((ctx.channel.id, GameType.COINFLIP) not in Games.keys()):
@@ -285,6 +285,20 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
 # command rollthedice
 @bot.command(name='rollthedice', aliases=["rtd"])
 async def rollthedice(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Roll the dice!
+
+    Coinflip commands:
+    * rtd create - creates a new game of coinflip
+    * rtd exit - removes existing game of coinflip from the current room
+    * rtd join - joins an existing game
+    * rtd leave - leaves the game you participate in
+    * rtd bet [sum/doubles] [selected sum/number for doubles] [amount] - places a bet of "amount" on the selected option
+    * rtd ready - sets a player ready to flip the coin
+    * rtd unready - unsets the ready status
+    * rtd status - displays the status of the game
+    * rtd bets - displays all currently placed bets
+    """
     argv = arg_str.split(' ')
     if (len(argv) < 1):
         await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
@@ -295,7 +309,7 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
         Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data)
-        await ctx.send(f'Game was created, join the game using \'join -balance-\'')
+        await ctx.send(f'Game was created, join the game using \'join\'')
         return
     if (argv[0] == "exit"):
         if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
