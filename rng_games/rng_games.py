@@ -36,8 +36,8 @@ class RNGGame(Game, ABC):
     players: dict[int, RNGPlayer]
     last_roll: int | None
     database: Database
-    def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType):
-        super().__init__(database, gametype)
+    def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType, channel: discord.TextChannel):
+        super().__init__(database, gametype, channel)
         self.database = database
         self.name = name
         self.lowest = lowest
@@ -194,8 +194,8 @@ class RNGGame(Game, ABC):
         return message
 
 class Coinflip(RNGGame):
-    def __init__(self, data: Database):
-        super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP)
+    def __init__(self, data: Database, channel: discord.TextChannel):
+        super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP, channel)
     
     # Override
     def get_bets_msg(self):
@@ -219,11 +219,11 @@ class GuessTheNumber(RNGGame):
         pass
 
 class RollTheDice(RNGGame):
-    def __init__(self, data: Database):
+    def __init__(self, data: Database, channel: discord.TextChannel):
         self.rates : dict[int, float]
         self.last_dice1: int
         self.last_dice2: int
-        super().__init__(data, "rtd", 2, 12, GameType.ROLLTHEDICE)
+        super().__init__(data, "rtd", 2, 12, GameType.ROLLTHEDICE, channel)
         for number in range(-1, -7, -1):
             self.bets[number] = []
         self.rates = {

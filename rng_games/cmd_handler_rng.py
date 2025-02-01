@@ -1,4 +1,4 @@
-from rng_games import RNGGame, Bet, Coinflip, RollTheDice, GuessTheNumber
+from rng_games.rng_games import RNGGame, Bet, Coinflip, RollTheDice, GuessTheNumber
 from discord.ext import commands
 from enums import E, CoinflipSides
 from typing import Callable, Awaitable

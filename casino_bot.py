@@ -1,14 +1,15 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler, CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 import os
 import asyncio
 import signal
 import sys
 from database import Database
 from blackjack.black_jack import BlackJack, Card, Player
+from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 from baccarat.baccarat import Baccarat
+from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from base_classes import Game
 from enums import GameType
 from ui import JoinUI
@@ -274,7 +275,7 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
         if ((ctx.channel.id, GameType.COINFLIP) in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(Data)
+        Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(Data, ctx.channel)
         await ctx.send(f"Game was created, join the game using \'join\'")
         return
     if (argv[0] == "exit"):
@@ -309,29 +310,29 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
     * rtd status - displays the status of the game
     * rtd bets - displays all currently placed bets
     """
-    argv = arg_str.split(' ')
-    if (len(argv) < 1):
-        await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
-        return
-    global Games
-    if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
-            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
-            return
-        Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data)
-        await ctx.send(f'Game was created, join the game using \'join\'')
-        return
-    if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
-            await ctx.send(f'Game does not exist')
-            return
-        Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
-        await ctx.send(f'Game was exited')
-        return
-    if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
-            await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
-            return
     try:
+        argv = arg_str.split(' ')
+        if (len(argv) < 1):
+            await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
+            return
+        global Games
+        if (argv[0] == "create"):
+            if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
+                await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+                return
+            Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data, ctx.channel)
+            await ctx.send(f'Game was created, join the game using \'join\'')
+            return
+        if (argv[0] == "exit"):
+            if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+                await ctx.send(f'Game does not exist')
+                return
+            Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
+            await ctx.send(f'Game was exited')
+            return
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+                await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
+                return
         await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
     except Exception as e:
         print(e)
