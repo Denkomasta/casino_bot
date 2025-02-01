@@ -11,6 +11,7 @@ from black_jack import BlackJack, Card, Player
 from baccarat import Baccarat
 from base_classes import Game
 from enums import GameType
+from ui import JoinUI
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
@@ -223,6 +224,7 @@ async def baccarat(ctx, *, arg_str):
             return
         Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(Data)
         await ctx.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'')
+        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
         return
     if (argv[0] == "exit"):
         if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
