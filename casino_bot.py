@@ -155,7 +155,7 @@ async def pay(ctx, mention: str = None, amount_s: str = None):
 
 # command blackjack
 @bot.command(name='blackjack', aliases=["bj"])
-async def blackjack(ctx, *, arg_str):
+async def blackjack(ctx: commands.Context, *, arg_str):
     """
     Play a game of blackjack!
 
@@ -181,8 +181,9 @@ async def blackjack(ctx, *, arg_str):
         if ((ctx.channel.id, GameType.BLACKJACK) in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.BLACKJACK)] = BlackJack(Data)
+        Games[(ctx.channel.id, GameType.BLACKJACK)] = BlackJack(Data, ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join -bet-\' and start the game using \'start\'')
+        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BLACKJACK)], GameType.BLACKJACK))
         return
     if (argv[0] == "exit"):
         if ((ctx.channel.id, GameType.BLACKJACK) not in Games.keys()):
@@ -198,9 +199,9 @@ async def blackjack(ctx, *, arg_str):
 
         # TODO add implementation of blackjack game
 
-# command blackjack
+# command baccarat
 @bot.command(name='baccarat', aliases=["bc"])
-async def baccarat(ctx, *, arg_str):
+async def baccarat(ctx: commands.Context, *, arg_str):
     """
     Play a game of baccarat!
 
@@ -222,7 +223,7 @@ async def baccarat(ctx, *, arg_str):
         if ((ctx.channel.id, GameType.BACCARAT) in Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(Data)
+        Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(Data, ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'')
         await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
         return
@@ -232,6 +233,12 @@ async def baccarat(ctx, *, arg_str):
             return
         Games.pop((ctx.channel.id, GameType.BACCARAT))
         await ctx.send(f'Game was exited')
+        return
+    if (argv[0] == "join" and len(argv) == 1):
+        if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
         return
     if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
             await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
