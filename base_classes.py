@@ -82,10 +82,10 @@ class Game(ABC):
     
         match self.type:
             case GameType.BLACKJACK:
-                from black_jack import BlackJackPlayer
+                from blackjack.black_jack import BlackJackPlayer
                 self.players[player_info.id] = BlackJackPlayer(player_info, bet)
             case GameType.BACCARAT:
-                from baccarat import BaccaratPlayer
+                from baccarat.baccarat import BaccaratPlayer
                 self.players[player_info.id] = BaccaratPlayer(player_info, bet, BaccaratBetType.UNDEFINED)
         self.collect_bet(player_info, 0, bet)
         return E.SUCCESS
