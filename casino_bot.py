@@ -7,12 +7,12 @@ import asyncio
 import signal
 import sys
 from database import Database
-from black_jack import BlackJack, Card, Player
-from baccarat import Baccarat
+from blackjack.black_jack import BlackJack, Card, Player
+from baccarat.baccarat import Baccarat
 from base_classes import Game
 from enums import GameType
 from ui import JoinUI
-from rng_games import Coinflip, RollTheDice, GuessTheNumber
+from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
