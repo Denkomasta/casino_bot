@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler
+from cmd_handler import BlackJackCmdHandler, BaccaratCmdHandler, CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 import os
 import asyncio
 import signal
@@ -11,6 +11,7 @@ from black_jack import BlackJack, Card, Player
 from baccarat import Baccarat
 from base_classes import Game
 from enums import GameType
+from rng_games import Coinflip, RollTheDice, GuessTheNumber
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
@@ -23,6 +24,7 @@ CHAIN_DELIM = ";"
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix=CMD_PREFIX, case_insensitive=True, intents=intents)
 
 @bot.event
@@ -237,9 +239,92 @@ async def baccarat(ctx, *, arg_str):
     await BaccaratCmdHandler.cmd_run(Games[(ctx.channel.id, GameType.BACCARAT)], ctx, argv)
 
 # command coinflip
-@bot.command(name='coinflip', help='Flip a coin.')
-async def coinflip(ctx):
-    await ctx.send('Coinflip TBD')      # TODO add implementation of coinflip
+@bot.command(name='coinflip', aliases=["cf"])
+async def coinflip(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Coinflip!
+
+    Coinflip commands:
+    * cf create - creates a new game of coinflip
+    * cf exit - removes existing game of coinflip from the current room
+    * cf join - joins an existing game
+    * cf leave - leaves the game you participate in
+    * cf bet [heads/tails] [amount] - places a bet of "amount" on the selected option
+    * cf ready - sets a player ready to flip the coin
+    * cf unready - unsets the ready status
+    * cf status - displays the status of the game
+    * cf bets - displays all currently placed bets
+    """
+    argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run !cf help for available commands")
+        return
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.COINFLIP) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+        Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(Data)
+        await ctx.send(f"Game was created, join the game using \'join\'")
+        return
+    if (argv[0] == "exit"):
+        if ((ctx.channel.id, GameType.COINFLIP) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.COINFLIP))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.COINFLIP) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!cf create\' to use commands')
+            return
+    try:
+        await CoinflipCmdHandler.command_run(Games[(ctx.channel.id, GameType.COINFLIP)], ctx, argv)
+    except Exception as e:
+        print(e)
+
+# command rollthedice
+@bot.command(name='rollthedice', aliases=["rtd"])
+async def rollthedice(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Roll the dice!
+
+    Coinflip commands:
+    * rtd create - creates a new game of coinflip
+    * rtd exit - removes existing game of coinflip from the current room
+    * rtd join - joins an existing game
+    * rtd leave - leaves the game you participate in
+    * rtd bet [sum/doubles] [selected sum/number for doubles] [amount] - places a bet of "amount" on the selected option
+    * rtd ready - sets a player ready to flip the coin
+    * rtd unready - unsets the ready status
+    * rtd status - displays the status of the game
+    * rtd bets - displays all currently placed bets
+    """
+    argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
+        return
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+        Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data)
+        await ctx.send(f'Game was created, join the game using \'join\'')
+        return
+    if (argv[0] == "exit"):
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
+            return
+    try:
+        await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
+    except Exception as e:
+        print(e)
 
 # command roulette
 @bot.command(name='roulette', help='Spin a roulette.')
@@ -250,6 +335,58 @@ async def roulette(ctx):
 @bot.command(name='slots', help='Play slot machine.')
 async def slots(ctx):
     await ctx.send('Slots TBD')      # TODO add implementation of slots
+
+@bot.command(name='GuessNumber', aliases=["gtn"])
+async def GuessNumber(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Guess The Number (gtn)!
+
+    gtn commands:
+    * gtn create - creates a new game of guess then number
+    * gtn exit - removes existing game of gtn from the current room
+    * gtn join - joins an existing game
+    * gtn leave - leaves the game you participate in
+    * gtn guess [number] [amount] - places a bet of "amount" on the selected option
+    * gtn ready - sets a player ready to flip the coin
+    * gtn unready - unsets the ready status
+    * gtn status - displays the status of the game
+    * gtn bets - displays all currently placed bets
+    """
+
+    argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run !cf help for available commands")
+        return
+    global Games
+    key = (ctx.channel.id, GameType.GUESSNUMBER)
+    if (argv[0] == "create"):
+        if (key in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+
+        try:
+            Games[key] = GuessTheNumber(Data)
+        except Exception as e:
+            print(f"Error creating game: {e}")
+            await ctx.send(f'Error creating game')
+            return
+
+        await ctx.send(f'Game was created, join the game using \'join\'')
+        return
+    if (argv[0] == "exit"):
+        if (key not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop(key)
+        await ctx.send(f'Game was exited')
+        return
+    if (key not in Games.keys()):
+        await ctx.send(f'Game does not exist, use \'{CMD_PREFIX}gtn create\' to use commands')
+        return
+    try:
+        await GuessNumberCmdHandler.command_run(Games[key], ctx, argv)
+    except Exception as e:
+        print(e)
 
 # command poker
 @bot.command(name='poker', help='Play a game of poker.')

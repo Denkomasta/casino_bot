@@ -7,6 +7,7 @@ class E(IntEnum):
     OUT_OF_RANGE = -3
     INV_PLAYER = -4
     INV_BET = -5
+    DUPLICITE_BET = -6
 
 class GameType(IntEnum):
     BLACKJACK = 0
@@ -15,6 +16,8 @@ class GameType(IntEnum):
     ROULETTE = 3
     SLOTS = 4
     BACCARAT = 5
+    ROLLTHEDICE = 6
+    GUESSNUMBER = 7
 
 class GameState(IntEnum):
     WAITING_FOR_PLAYERS = 0
@@ -45,3 +48,15 @@ class BaccaratBetType:
     BANKER = 1
     TIE = 2
     UNDEFINED = 3
+
+class CoinflipSides(IntEnum):
+    HEADS = 1
+    TAILS = 2
+
+class RTDDoubles(IntEnum):
+    ONES = -1
+    TWOS = -2
+    THREES = -3
+    FOURS = -4
+    FIVES = -5
+    SIXES = -6
