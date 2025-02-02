@@ -4,7 +4,7 @@ from discord.ext import commands
 from base_classes import Game
 from blackjack.black_jack import BlackJack
 from baccarat.baccarat import Baccarat
-from rng_games.rng_games import RNGGame, Bet, Coinflip, RollTheDice, GuessTheNumber
+from rng_games.rng_games import RNGGame, RNGBet, Coinflip, RollTheDice, GuessTheNumber
 from abc import ABC, abstractmethod
 
 import discord
