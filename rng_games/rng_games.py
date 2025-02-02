@@ -2,22 +2,17 @@ from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
 from discord.ext import commands
-from enums import E, GameType, CoinflipSides, RTDDoubles
+from enums import E, GameType, CoinflipSides, RTDDoubles, PlayerState
 from typing import Callable, Awaitable, Type
 from database import Database
-from base_classes import Game
+from base_classes import Game, Player
 from ascii_obj import Ascii
 
-class RNGPlayer:
-    player_id: int
-    name: str
-    ready: bool
-    def __init__(self, player_id: int, name: str):
-        self.player_id = player_id
-        self.name = name
-        self.ready = False
+class RNGPlayer(Player):
+    def __init__(self, player_info):
+        super().__init__(player_info, None)
 
-class Bet:
+class RNGBet:
     player: RNGPlayer
     bet: int
     odd: int
@@ -32,7 +27,7 @@ class RNGGame(Game, ABC):
     name: str
     lowest: int
     highest: int
-    bets: dict[int, list[Bet]]
+    bets: dict[int, list[RNGBet]]
     players: dict[int, RNGPlayer]
     last_roll: int | None
     database: Database
@@ -46,63 +41,63 @@ class RNGGame(Game, ABC):
         self.players = dict()
         self.last_roll = None
 
-    def add_player(self, player_id: int, name: str) -> E:
-        if self.players.get(name, None) is not None:
+    def add_player(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is not None:
             return E.INV_PLAYER
-        self.players[player_id] = RNGPlayer(player_id, name)
+        self.players[player_info.id] = RNGPlayer(player_info)
         return E.SUCCESS
 
-    def remove_player(self, player_id: int) -> E:
-        if self.players.get(player_id, None) is None:
+    def remove_player(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        self.players.pop(player_id)
+        self.players.pop(player_info.id)
         return E.SUCCESS
     
-    def place_bet(self, player_id: int, bet_amount: int, number: int, odd: int) -> E:
-        if self.players.get(player_id, None) is None:
+    def place_bet(self, player_info: discord.User | discord.Member, bet_amount: int, number: int, odd: int) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
         if number < self.lowest or number > self.highest:
             return E.OUT_OF_RANGE
-        if bet_amount > self.database.get_player_balance(player_id):
+        if bet_amount > self.database.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
-        existing_bet = self.find_duplicite_bet(player_id, number)
+        existing_bet = self.find_duplicite_bet(player_info.id, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
-            self.database.change_player_balance(player_id, -bet_amount)
+            self.database.change_player_balance(player_info.id, -bet_amount)
             return E.DUPLICITE_BET
 
-        new_bet = Bet(self.players[player_id], bet_amount, odd)
+        new_bet = RNGBet(self.players[player_info.id], bet_amount, odd)
         self.bets[number].append(new_bet)
-        self.database.change_player_balance(player_id, -bet_amount)
+        self.database.change_player_balance(player_info.id, -bet_amount)
         return E.SUCCESS
     
-    def find_duplicite_bet(self, player_id: int, number: int) -> Bet | None:
+    def find_duplicite_bet(self, player_info: discord.User | discord.Member, number: int) -> RNGBet | None:
         for bet in self.bets[number]:
-            if bet.player.player_id == player_id:
+            if bet.player.player_info.id == player_info.id:
                 return bet
         return None
 
-    def change_bet(self, player_id: int, new_bet_amount: int, new_number: int, new_odd: int) -> E:
-        if self.players.get(player_id, None) is None:
+    def change_bet(self, player_info: discord.User | discord.Member, new_bet_amount: int, new_number: int, new_odd: int) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
         if new_number < self.lowest or new_number > self.highest:
             return E.OUT_OF_RANGE
-        temp = self.find_bet_by_player(player_id)
+        temp = self.find_bet_by_player(player_info.id)
         if temp is None:
-            return self.place_bet(player_id, new_bet_amount, new_number, new_odd)
+            return self.place_bet(player_info.id, new_bet_amount, new_number, new_odd)
 
         existing_bet = self.bets[temp[0]][temp[1]]
         number, index = temp
-        if new_bet_amount > self.database.get_player_balance(player_id):
+        if new_bet_amount > self.database.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
         if new_bet_amount != existing_bet.bet:
-            self.database.change_player_balance(player_id, existing_bet.bet)
+            self.database.change_player_balance(player_info.id, existing_bet.bet)
             existing_bet.bet = new_bet_amount
             existing_bet.possible_winning = new_bet_amount * new_odd
-            self.database.change_player_balance(player_id, -new_bet_amount)
+            self.database.change_player_balance(player_info.id, -new_bet_amount)
         
         if new_number != number:
             self.bets[number].pop(index)
@@ -110,67 +105,67 @@ class RNGGame(Game, ABC):
 
         return E.SUCCESS
     
-    def find_bet_by_player(self, player_id: int) -> tuple[int, int] | None:
+    def find_bet_by_player(self, player_info: discord.User | discord.Member) -> tuple[int, int] | None:
         for number, bets in self.bets.items():
             for i in range(len(bets)):
-                if bets[i].player.player_id == player_id:
+                if bets[i].player.player_info.id == player_info.id:
                     return number, i
         return None
     
-    def ready_up(self, player_id: int) -> E:
-        if self.players.get(player_id, None) is None:
+    def ready_up(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        if self.players[player_id].ready:
+        if self.players[player_info.id].state == PlayerState.READY:
             return E.INV_STATE
 
-        self.players[player_id].ready = True
+        self.players[player_info.id].state = PlayerState.READY
         return E.SUCCESS
 
-    def unready(self, player_id: int) -> E:
-        if self.players.get(player_id, None) is None:
+    def unready(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        if not self.players[player_id].ready:
+        if not self.players[player_info.id].state == PlayerState.READY:
             return E.INV_STATE
 
-        self.players[player_id].ready = False
+        self.players[player_info.id].state = PlayerState.READY
         return E.SUCCESS
 
     def check_ready(self) -> bool:
         for player in self.players.values():
-            if not player.ready:
+            if player.state == PlayerState.NOT_READY:
                 return False
         return True
     
-    def roll(self) -> list[Bet]:
+    def roll(self) -> list[RNGBet]:
         winning_number: int = randrange(self.lowest, self.highest + 1)
         self.last_roll = winning_number
         return self.bets[winning_number]
 
-    def give_winnings(self, winning_bets: list[Bet]) -> E:
+    def give_winnings(self, winning_bets: list[RNGBet]) -> E:
         retval: E = E.SUCCESS
         for bet in winning_bets:
-            if self.players.get(bet.player.player_id, None) is None:
+            if self.players.get(bet.player.player_info.id, None) is None:
                 retval = E.INV_PLAYER
                 continue
-            self.database.change_player_balance(bet.player.player_id, bet.possible_winning)
+            self.database.change_player_balance(bet.player.player_info.id, bet.possible_winning)
         return retval
     
-    def build_winners_message(self, winning_bets: list[Bet]) -> str:
+    def build_winners_message(self, winning_bets: list[RNGBet]) -> str:
         if len(winning_bets) == 0:
             return "No winners this round!"
-        message = f"The winners are:\n{winning_bets[0].player.name} with a win of {winning_bets[0].possible_winning}"
+        message = f"The winners are:\n{winning_bets[0].player.player_info.display_name} with a win of {winning_bets[0].possible_winning}"
         for i in range(1, len(winning_bets)):
-            message += f"\n{winning_bets[i].player.name} with a win of {winning_bets[i].possible_winning}"
+            message += f"\n{winning_bets[i].player.player_info.display_name} with a win of {winning_bets[i].possible_winning}"
         message += "\nCongratulations!"
         return message
 
     def restart_game(self):
         self.bets = {number: [] for number in range(self.lowest, self.highest + 1)}
         for player in self.players.values():
-            player.ready = False
+            player.state = PlayerState.NOT_READY
 
-    def check_valid_player(self, player_id: int):
-        return (self.players.get(player_id, None) is not None)
+    def check_valid_player(self, player_info: discord.User | discord.Member):
+        return (self.players.get(player_info.id, None) is not None)
 
     def get_status_msg(self):
         message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
@@ -190,7 +185,7 @@ class RNGGame(Game, ABC):
         for i, bet in enumerate(bet_list):
             if i > 0:
                 message += ", "
-            message += f"({bet.player.name}, {bet.bet})"
+            message += f"({bet.player.player_info.display_name}, {bet.bet})"
         return message
 
 class Coinflip(RNGGame):
@@ -250,28 +245,28 @@ class RollTheDice(RNGGame):
         return self.rates.get(number)
     
     # Override
-    def place_bet(self, player_id: int, bet_amount: int, number: int, odd: float) -> E:
-        if self.players.get(player_id, None) is None:
+    def place_bet(self, player_info: discord.User | discord.Member, bet_amount: int, number: int, odd: float) -> E:
+        if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
         if number < -6 or number in [0, 1] or number > 12:
             return E.OUT_OF_RANGE
-        if bet_amount > self.database.get_player_balance(player_id):
+        if bet_amount > self.database.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
-        existing_bet = self.find_duplicite_bet(player_id, number)
+        existing_bet = self.find_duplicite_bet(player_info.id, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
-            self.database.change_player_balance(player_id, -bet_amount)
+            self.database.change_player_balance(player_info.id, -bet_amount)
             return E.DUPLICITE_BET
 
-        new_bet = Bet(self.players[player_id], bet_amount, odd)
+        new_bet = RNGBet(self.players[player_info.id], bet_amount, odd)
         self.bets[number].append(new_bet)
-        self.database.change_player_balance(player_id, -bet_amount)
+        self.database.change_player_balance(player_info.id, -bet_amount)
         return E.SUCCESS
     
     # Override
-    def roll(self) -> list[Bet]:
+    def roll(self) -> list[RNGBet]:
         self.last_dice1: int = randrange(1, 7)
         self.last_dice2: int = randrange(1, 7)
         self.last_roll = self.last_dice1 + self.last_dice2
@@ -280,7 +275,7 @@ class RollTheDice(RNGGame):
             winning_bets.extend(self.bets[-self.last_dice1])
         return winning_bets
     
-    def build_conclusion_message(self, winning_bets: list[Bet]):
+    def build_conclusion_message(self, winning_bets: list[RNGBet]):
         message = "Dice are on the table and the result is:\n"
         message += Ascii.draw_dice([self.last_dice1, self.last_dice2])
         message += f"We got a sum of {self.last_roll}!"
@@ -306,7 +301,13 @@ class RollTheDice(RNGGame):
         for number in range(-1, -7, -1):
             self.bets[number] = []
         for player in self.players.values():
-            player.ready = False
+            player.state = PlayerState.NOT_READY
+
+class Roulette(RNGGame):
+
+    def __init__(self, data: Database, channel: discord.TextChannel):
+        super().__init__(data, "roulette", 0, 36, GameType.ROULETTE, channel)
+
 #              ││
 #              \/
 #            │ 47 │

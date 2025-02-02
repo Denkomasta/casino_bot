@@ -14,7 +14,7 @@ from base_classes import Game
 from cmd_handler import CommandHandler
 from enums import GameType
 from ui import JoinUI, PlayUI, CreateUI
-from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber
+from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber, Roulette
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 
 Games: dict[(int, int), Game] = {}
@@ -279,11 +279,11 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
     * cf ready - sets a player ready to flip the coin
     * cf unready - unsets the ready status
     * cf status - displays the status of the game
-    * cf bets - displays all currently placed bets
+    * cf betlist - displays all currently placed bets
     """
     argv = arg_str.split(' ')
     if (len(argv) < 1):
-        await ctx.send(f"No argument, run !cf help for available commands")
+        await ctx.send(f"No argument, run {CMD_PREFIX}cf help for available commands")
         return
     global Games
     if (argv[0] == "create"):
@@ -314,7 +314,7 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
     """
     Play a game of Roll the dice!
 
-    Coinflip commands:
+    Roll the dice commands:
     * rtd create - creates a new game of coinflip
     * rtd exit - removes existing game of coinflip from the current room
     * rtd join - joins an existing game
@@ -323,39 +323,72 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
     * rtd ready - sets a player ready to flip the coin
     * rtd unready - unsets the ready status
     * rtd status - displays the status of the game
-    * rtd bets - displays all currently placed bets
+    * rtd betlist - displays all currently placed bets
     """
-    try:
-        argv = arg_str.split(' ')
-        if (len(argv) < 1):
-            await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
+    argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
+        return
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        global Games
-        if (argv[0] == "create"):
-            if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
-                await ctx.send(f'Game already exists in your channel, use \'exit\' first')
-                return
-            Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data, ctx.channel)
-            await ctx.send(f'Game was created, join the game using \'join\'')
-            return
-        if (argv[0] == "exit"):
-            if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
-                await ctx.send(f'Game does not exist')
-                return
-            Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
-            await ctx.send(f'Game was exited')
-            return
+        Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data, ctx.channel)
+        await ctx.send(f'Game was created, join the game using \'join\'')
+        return
+    if (argv[0] == "exit"):
         if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
-                await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
-                return
-        await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
-    except Exception as e:
-        print(e)
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
+            return
+    await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
 
 # command roulette
-@bot.command(name='roulette', help='Spin a roulette.')
-async def roulette(ctx):
-    await ctx.send('Roulette TBD')      # TODO add implementation of roulette
+@bot.command(name='roulette', aliases=['rl'])
+async def roulette(ctx: commands.Context, *, arg_str: str):
+    """
+    Play a game of Roll the dice!
+
+    Coinflip commands:
+    * rlt create - creates a new game of coinflip
+    * rlt exit - removes existing game of coinflip from the current room
+    * rlt join - joins an existing game
+    * rlt leave - leaves the game you participate in
+    * rlt bet [sum/doubles] [selected sum/number for doubles] [amount] - places a bet of "amount" on the selected option
+    * rlt ready - sets a player ready to flip the coin
+    * rlt unready - unsets the ready status
+    * rlt status - displays the status of the game
+    * rlt betlist - displays all currently placed bets
+    """
+    argv = arg_str.split(' ')
+    if (len(argv) < 1):
+        await ctx.send(f"No argument, run {CMD_PREFIX}rlt help for available commands")
+        return
+    global Games
+    if (argv[0] == "create"):
+        if ((ctx.channel.id, GameType.ROULETTE) in Games.keys()):
+            await ctx.send(f'Game already exists in your channel, use \'exit\' first')
+            return
+        Games[(ctx.channel.id, GameType.ROULETTE)] = Roulette(Data, ctx.channel)
+        await ctx.send(f'Game was created, join the game using \'join\'')
+        return
+    if (argv[0] == "exit"):
+        if ((ctx.channel.id, GameType.ROULETTE) not in Games.keys()):
+            await ctx.send(f'Game does not exist')
+            return
+        Games.pop((ctx.channel.id, GameType.ROULETTE))
+        await ctx.send(f'Game was exited')
+        return
+    if ((ctx.channel.id, GameType.ROULETTE) not in Games.keys()):
+            await ctx.send(f'Game does not exist, use \'!rlt create\' to use commands')
+            return
+    await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROULETTE)], ctx, argv)
 
 # command slots
 @bot.command(name='slots', help='Play slot machine.')
