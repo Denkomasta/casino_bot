@@ -86,6 +86,29 @@ class BaccaratCmdHandler(CommandHandler):
         await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.BACCARAT))
         await game.channel.send("Do you want to change your bet??", view=BaccaratBetUI(game))
 
+    @staticmethod
+    async def cmd_betlist(game: Baccarat, source: commands.Context | discord.Interaction, args: list[str]):
+        if (len(args) != 1):
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source)
+            return
+        await CommandHandler.send(f"```\n{game.show_betlist()}\n```", source, ephemeral=True)
+
+
+    @staticmethod
+    async def cmd_status(game: Baccarat, source: commands.Context | discord.Interaction, args: list[str]):
+        if (len(args) != 1):
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source, ephemeral=True)
+            return
+        match (game.state):
+            case GameState.WAITING_FOR_PLAYERS:
+                await CommandHandler.send(f"```GAME IS WAITING TO START:\n\nPlayer that are not ready:\n{game.show_players_by_state(PlayerState.NOT_READY)}```", source, ephemeral=True)
+                return
+            case GameState.RUNNING:
+                await CommandHandler.send(f"```GAME IS RUNNING:\n\nTable:\n{game.show_game()}\n\nStill active players:\n{game.show_players_by_state(PlayerState.PLAYING)}```", source, ephemeral=True)
+                return
+            case GameState.ENDED:
+                await CommandHandler.send(f"```GAME ENDED:\n\nResults:\n{game.show_results()}```", source, ephemeral=True)
+                return
 
     @staticmethod
     async def cmd_help(game: Baccarat, source: commands.Context | discord.Interaction, args: list[str]):
@@ -107,5 +130,6 @@ class BaccaratCmdHandler(CommandHandler):
         "ready": cmd_ready,
         "unready": cmd_unready,
         "bet": cmd_bet,
+        "betlist": cmd_betlist,
         "help": cmd_help
     }

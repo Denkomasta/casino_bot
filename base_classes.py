@@ -147,6 +147,13 @@ class Game(ABC):
 
     def check_valid_player(self, player_info: discord.User | discord.Member):
         return (self.players.get(player_info.id, None) is not None)
+    
+    def show_players_by_state(self, state: PlayerState) -> str:
+        show: str = ""
+        for player in self.players.values():
+            if (player.state == state):
+                show += f"{player.player_info.name}\n"
+        return show
 
 class CardGame(Game):
     deck: list[Card]

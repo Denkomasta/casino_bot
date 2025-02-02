@@ -104,25 +104,22 @@ class BlackJackCmdHandler(CommandHandler):
             return
         await game.channel.send(f"{CommandHandler.get_name(source)} now stands")
         
-    
-
     @staticmethod
     async def cmd_status(game: BlackJack, source: commands.Context | discord.Interaction, args: list[str]):
         """Handles the 'status' command."""
         if (len(args) != 1):
-            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source)
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source, ephemeral=True)
             return
         match (game.state):
             case GameState.WAITING_FOR_PLAYERS:
-                await game.channel.send(f"```GAME IS WAITING TO START:\n\nPlayer that are not ready:\n{game.show_players_by_state(PlayerState.NOT_READY)}```")
+                await CommandHandler.send(f"```GAME IS WAITING TO START:\n\nPlayer that are not ready:\n{game.show_players_by_state(PlayerState.NOT_READY)}```", source, ephemeral=True)
                 return
             case GameState.RUNNING:
-                await game.channel.send(f"```GAME IS RUNNING:\n\nTable:\n{game.show_game()}\n\nStill active players:\n{game.show_players_by_state(PlayerState.PLAYING)}```")
+                await CommandHandler.send(f"```GAME IS RUNNING:\n\nTable:\n{game.show_game()}\n\nStill active players:\n{game.show_players_by_state(PlayerState.PLAYING)}```", source, ephemeral=True)
                 return
             case GameState.ENDED:
-                await game.channel.send(f"```GAME ENDED:\n\nResults:\n{game.show_results()}```")
+                await CommandHandler.send(f"```GAME ENDED:\n\nResults:\n{game.show_results()}```", source, ephemeral=True)
                 return
-        await CommandHandler.send("Command 'status' invoked.")
 
     @staticmethod
     async def cmd_help(game: BlackJack, source: commands.Context | discord.Interaction, args: list[str]):
@@ -140,6 +137,13 @@ class BlackJackCmdHandler(CommandHandler):
             "restart - restarts the game, but players and bets will stay",
         ]
         await game.channel.send("```\n".join(help) + "```")
+
+    @staticmethod
+    async def cmd_betlist(game: BlackJack, source: commands.Context | discord.Interaction, args: list[str]):
+        if (len(args) != 1):
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source)
+            return
+        await CommandHandler.send(f"```\n{game.show_betlist()}\n```", source, ephemeral=True)
 
     @staticmethod
     async def blackjack_finish(game: BlackJack, source: commands.Context | discord.Interaction):
@@ -162,5 +166,6 @@ class BlackJackCmdHandler(CommandHandler):
         "stand": cmd_stand,
         "bet": CommandHandler.cmd_bet,
         "status": cmd_status,
+        "betlist": cmd_betlist,
         "help": cmd_help
     }

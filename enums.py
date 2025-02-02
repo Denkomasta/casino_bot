@@ -37,13 +37,13 @@ class CardSuits(IntEnum):
     CLUBS = 2
     SPADES = 3
 
-class PlayerResult:
+class PlayerResult(IntEnum):
     DEFEAT = 0
     VICTORY = 1
     DRAW = 2
     UNDEFINED = 3
 
-class BaccaratBetType:
+class BaccaratBetType(IntEnum):
     PLAYER = 0
     BANKER = 1
     TIE = 2

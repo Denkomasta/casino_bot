@@ -126,3 +126,14 @@ class Baccarat(CardGame):
             player.bet.result = PlayerResult.UNDEFINED
             player.bet.winning = 0
         self.collect_bets()
+
+
+    def show_betlist(self) -> None:
+        if len(self.players) == 0:
+            return "No bets are placed currently"
+        
+        show = "Current bets are as follows:\n"
+        show += "-------------------------\n"
+        for player in self.players.values():
+            show += f"{player.player_info.name}: {player.bet.value} on {BaccaratBetType(player.bet.type).name}\n"
+        return show
