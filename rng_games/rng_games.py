@@ -112,23 +112,6 @@ class RNGGame(Game):
                     return number, i
         return None
     
-    def ready_up(self, player_info: discord.User | discord.Member) -> E:
-        if self.players.get(player_info.id, None) is None:
-            return E.INV_PLAYER
-        if self.players[player_info.id].state == PlayerState.READY:
-            return E.INV_STATE
-
-        self.players[player_info.id].state = PlayerState.READY
-        return E.SUCCESS
-
-    def unready(self, player_info: discord.User | discord.Member) -> E:
-        if self.players.get(player_info.id, None) is None:
-            return E.INV_PLAYER
-        if self.players[player_info.id].state == PlayerState.NOT_READY:
-            return E.INV_STATE
-
-        self.players[player_info.id].state = PlayerState.NOT_READY
-        return E.SUCCESS
 
     def check_ready(self) -> bool:
         for player in self.players.values():
@@ -164,8 +147,6 @@ class RNGGame(Game):
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
 
-    def check_valid_player(self, player_info: discord.User | discord.Member):
-        return (self.players.get(player_info.id, None) is not None)
 
     def get_status_msg(self):
         message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'

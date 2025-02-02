@@ -7,7 +7,10 @@ from baccarat.baccarat import BaccaratPlayer, BaccaratBet
 from cmd_handler import CommandHandler
 from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
+from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler
+from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
 from database import Database
+from abc import ABC
 
 class UI(discord.ui.View):
     game: Game
@@ -26,11 +29,11 @@ class JoinUI(UI):
     @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple)
     async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            bet_ui: BetUI
+            bet_ui: GameUserInterface
             match self.type:
                 case GameType.BACCARAT:
                     from baccarat.ui_baccarat import BaccaratBetUI
-                    bet_ui = BaccaratBetUI(self.game, True)
+                    bet_ui = BaccaratBetUI(self.game)
                 case GameType.COINFLIP:
                     from rng_games.ui_rng import CoinflipUserInterface
                     bet_ui = CoinflipUserInterface(self.game)
@@ -38,7 +41,7 @@ class JoinUI(UI):
                     from rng_games.ui_rng import RollTheDiceUserInterface
                     bet_ui = RollTheDiceUserInterface(self.game)
                 case _:
-                    bet_ui = BetUI(self.game, True)
+                    bet_ui = BetUI(self.game)
             await CommandHandler.cmd_join(self.game, interaction, ["join"])
             await interaction.response.send_message(view=bet_ui, ephemeral=True)
         except Exception as e:
@@ -74,7 +77,6 @@ class StartUI(UI):
     def __init__(self, game: Game):
         super().__init__(game)
 
-
     @discord.ui.button(label="START", style=discord.ButtonStyle.blurple)
     async def handle_ready(self, interaction: discord.Interaction, button: discord.ui.Button):
         match self.game.type:
@@ -82,6 +84,12 @@ class StartUI(UI):
                 await BaccaratCmdHandler.cmd_start(self.game, interaction, ["start"])
             case GameType.BLACKJACK:
                 await BlackJackCmdHandler.cmd_start(self.game, interaction, ["start"])
+            case GameType.COINFLIP:
+                await self.game.channel.send("All players are ready! Rolling!")
+                await CoinflipCmdHandler.subcommand_roll(self.game, interaction, ["start"])
+            case GameType.ROLLTHEDICE:
+                await self.game.channel.send("All players are ready! Rolling!")
+                await RollTheDiceCmdHandler.subcommand_roll(self.game, interaction, ["start"])
         await interaction.response.send_message("Game started succesfully", delete_after=0)
 
 class CreateUI(discord.ui.View):
@@ -129,24 +137,73 @@ class PlayUI(discord.ui.View):
         
         select.callback = select_callback
         self.add_item(select)
-
-class BetUI(UI):
-
-    def __init__(self, game: Game, is_new: bool):
+        
+class GameUserInterface(UI, ABC):
+    def __init__(self, game: Game):
         super().__init__(game)
-        self.is_new = is_new
 
-    @discord.ui.button(label="SET BET AMOUNT", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="READY", style=discord.ButtonStyle.green, row=2)
+    async def handle_ready(self, interaction: discord.Interaction, button: discord.ui.Button):
+        assert(isinstance(self.game, Game)) # Needed for highlighting
+        if not self.game.check_valid_player(interaction.user):
+            await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
+            return
+        await CommandHandler.cmd_ready(self.game, interaction, ["ready"])
+       
+    @discord.ui.button(label="NOT READY", style=discord.ButtonStyle.red, row=2)
+    async def handle_unready(self, interaction: discord.Interaction, button: discord.ui.Button):
+        assert(isinstance(self.game, Game)) # Needed for highlighting
+        if not self.game.check_valid_player(interaction.user):
+            await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
+            return
+        await CommandHandler.cmd_ready(self.game, interaction, ["ready"])
+
+
+    @discord.ui.button(label="STATUS", style=discord.ButtonStyle.gray, row=3)
+    async def handle_betlist(self, interaction: discord.Interaction, button: discord.ui.Button):
+        assert(isinstance(self.game, Game)) # Needed for highlighting
+        if not self.game.check_valid_player(interaction.user):
+            await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
+            return
+        match self.game.type:
+            case GameType.COINFLIP:
+                await CoinflipCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.ROLLTHEDICE:
+                await RollTheDiceCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.BLACKJACK:
+                await BlackJackCmdHandler.cmd_status(self.game, interaction, ["status"])
+            case _:
+                await interaction.response.send_message("Not implemented yet", ephemeral=True)
+
+    @discord.ui.button(label="BET LIST", style=discord.ButtonStyle.gray, row=3)
+    async def handle_bestlist(self, interaction: discord.Interaction, button: discord.ui.Button):
+        assert(isinstance(self.game, RNGGame)) # Needed for highlighting
+        if not self.game.check_valid_player(interaction.user):
+            await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
+            return
+        match self.game.type:
+            case GameType.COINFLIP:
+                await CoinflipCmdHandler.command_betlist(self.game, interaction, ["betlist"])
+            case GameType.ROLLTHEDICE:
+                await RollTheDiceCmdHandler.command_betlist(self.game, interaction, ["betlist"])
+            case _:
+                await interaction.response.send_message("Not implemented yet", ephemeral=True)
+
+class BetUI(GameUserInterface):
+
+    def __init__(self, game: Game):
+        super().__init__(game)
+
+    @discord.ui.button(label="SET BET AMOUNT", style=discord.ButtonStyle.blurple, row=1)
     async def handle_bet_amount(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BetModal(self.game, self.is_new))
+        await interaction.response.send_modal(BetModal(self.game))
     
 
 class BetModal(discord.ui.Modal, title="Place Your Bet"):
 
-    def __init__(self, game: Game, is_new: bool):
+    def __init__(self, game: Game):
         super().__init__(title="Place your bet")
         self.game = game
-        self.is_new = is_new
 
         self.bet_amount: discord.ui.TextInput = discord.ui.TextInput(
             label=f"Enter your bet amount",
@@ -156,7 +213,4 @@ class BetModal(discord.ui.Modal, title="Place Your Bet"):
         self.add_item(self.bet_amount)
 
     async def on_submit(self, interaction: discord.Interaction):
-        if self.is_new:
-            await interaction.response.send_message(view=ReadyUI(self.game), ephemeral=True)
         await CommandHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value])
-        

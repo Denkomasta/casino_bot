@@ -4,7 +4,7 @@ from enums import E, CoinflipSides
 from typing import Callable, Awaitable
 from cmd_handler import CommandHandler
 import discord
-from ui import JoinLeaveUI
+
 
 class RNGCmdHandler(CommandHandler):
     
@@ -145,7 +145,7 @@ class CoinflipCmdHandler(RNGCmdHandler):
             await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully bet another {bet} on {argv[1]}", source)
             return
         await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully bet {bet} on {argv[1]}", source)
-
+    
     #Override
     @staticmethod
     async def command_ready(game, source, argv):
@@ -153,7 +153,7 @@ class CoinflipCmdHandler(RNGCmdHandler):
         if game.check_ready():
             await game.channel.send("All players are ready! Rolling!")
             await CoinflipCmdHandler.subcommand_roll(game, source, argv)
-
+    
     #Override
     @staticmethod
     async def subcommand_roll(game, source, argv):
@@ -165,6 +165,7 @@ class CoinflipCmdHandler(RNGCmdHandler):
         game.restart_game()
         conclusion_message += 25 * '-' + '\n'
         conclusion_message += f"The game has been restarted, bet and try your luck again!"
+        from ui import JoinLeaveUI
         await game.channel.send(f"```{conclusion_message}```")
         await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
         from rng_games.ui_rng import CoinflipUserInterface
@@ -224,7 +225,7 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
         if game.check_ready():
             await game.channel.send("All players are ready! Rolling!")
             await RollTheDiceCmdHandler.subcommand_roll(game, source, argv)
-
+    
     #Override
     @staticmethod
     async def subcommand_roll(game: RollTheDice, source, argv):
@@ -234,6 +235,7 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
            conclusion_message += f"One or more players could not collect their winning because they left the game :(\n"
         game.restart_game()
         conclusion_message += f"The game has been restarted, bet and try your luck again!"
+        from ui import JoinLeaveUI
         await game.channel.send(f"```{conclusion_message}```")
         await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
         from rng_games.ui_rng import RollTheDiceUserInterface

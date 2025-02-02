@@ -130,3 +130,39 @@ class CommandHandler:
              await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is not in the game!", source, ephemeral=True)
              return
         await CommandHandler.send(f"Player {CommandHandler.get_name(source)} left the game!", source, ephemeral=True)
+
+
+    @staticmethod
+    async def cmd_ready(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
+        if (len(args) != 1):
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source)
+            return
+        if (game.state == GameState.RUNNING):
+            await CommandHandler.send(f"Game is already running", source, ephemeral=True)
+            return
+        cmd_status: E = game.ready_up(CommandHandler.get_info(source))
+        if cmd_status == E.INV_PLAYER:
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{GameType(game.type).name.lower()} join to participate", source, ephemeral=True)
+            return
+        if cmd_status == E.INV_STATE:
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are already ready for the roll!", source, ephemeral=True)
+            return
+        await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} is ready for the roll!", source, ephemeral=True)
+        if (game.are_players_ready()):
+            from ui import StartUI
+            await game.channel.send(view=StartUI(game))
+        
+
+    @staticmethod
+    async def cmd_unready(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
+        if (len(args) != 1):
+            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 1", source)
+            return
+        if (game.state == GameState.RUNNING):
+            await CommandHandler.send(f"Game is already running", source, ephemeral=True)
+            return
+        cmd_status: E = game.unready(CommandHandler.get_info(source))
+        if cmd_status == E.INV_PLAYER:
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{GameType(game.type).name.lower()} join to participate", source, ephemeral=True)
+            return
+        await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} needs more time to think and is now not ready", source)

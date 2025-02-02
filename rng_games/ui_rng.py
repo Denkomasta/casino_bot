@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from base_classes import Game
-from ui import UI, BetModal, ReadyUI
+from ui import UI, BetModal, ReadyUI, GameUserInterface
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler
 from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
 from abc import ABC
@@ -61,9 +61,10 @@ class RNGUserInterface(UI, ABC):
             case GameType.ROLLTHEDICE:
                 await RollTheDiceCmdHandler.command_betlist(self.game, interaction, ["betlist"])
 
-class CoinflipUserInterface(RNGUserInterface):
+class CoinflipUserInterface(GameUserInterface):
     def __init__(self, game: Game):
         super().__init__(game)
+        self.bet_type = None
 
     @discord.ui.select(
         placeholder="Choose an option to bet on...",
@@ -86,11 +87,12 @@ class CoinflipUserInterface(RNGUserInterface):
         if self.bet_type is None:
             await interaction.response.send_message(f"Choose an option to bet on!", ephemeral=True, delete_after=5)
             return
-        await interaction.response.send_modal(CoinflipBetModal(self.game, self.bet_type, False))
+        await interaction.response.send_modal(CoinflipBetModal(self.game, self.bet_type))
 
-class RollTheDiceUserInterface(RNGUserInterface):
+class RollTheDiceUserInterface(GameUserInterface):
     def __init__(self, game: Game):
         super().__init__(game)
+        self.bet_type = None
     
     @discord.ui.select(
         placeholder="Choose an option to bet on...",
@@ -121,8 +123,8 @@ class RollTheDiceUserInterface(RNGUserInterface):
 
 class CoinflipBetModal(BetModal):
 
-    def __init__(self, game: Game, type: str, is_new: bool):
-        super().__init__(game, is_new)
+    def __init__(self, game: Game, type: str):
+        super().__init__(game)
         self.bet_type = type
     
     async def on_submit(self, interaction: discord.Interaction):

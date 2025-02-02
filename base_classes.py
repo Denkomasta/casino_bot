@@ -97,6 +97,24 @@ class Game(ABC):
         self.players.pop(player_info.id)
         return E.SUCCESS
     
+    def ready_up(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is None:
+            return E.INV_PLAYER
+        if self.players[player_info.id].state == PlayerState.READY:
+            return E.INV_STATE
+
+        self.players[player_info.id].state = PlayerState.READY
+        return E.SUCCESS
+
+    def unready(self, player_info: discord.User | discord.Member) -> E:
+        if self.players.get(player_info.id, None) is None:
+            return E.INV_PLAYER
+        if self.players[player_info.id].state == PlayerState.NOT_READY:
+            return E.INV_STATE
+
+        self.players[player_info.id].state = PlayerState.NOT_READY
+        return E.SUCCESS
+    
     def are_players_ready(self):
         for player in self.players.values():
             if (player.state != PlayerState.READY):
@@ -126,6 +144,9 @@ class Game(ABC):
         for player in self.players.values():
             if (player.bet.winning > 0):
                 self.data.change_player_balance(player.player_info.id, player.bet.winning)
+
+    def check_valid_player(self, player_info: discord.User | discord.Member):
+        return (self.players.get(player_info.id, None) is not None)
 
 class CardGame(Game):
     deck: list[Card]
