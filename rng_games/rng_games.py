@@ -21,7 +21,7 @@ class RNGBet:
         self.player = player
         self.bet = bet
         self.odd = odd
-        self.possible_winning = self.bet * self.odd
+        self.possible_winning = int(self.bet * self.odd)
 
 class RNGGame(Game):
     name: str

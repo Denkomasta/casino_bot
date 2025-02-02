@@ -1,6 +1,7 @@
 import json
 import discord
 from typing import Any
+from time import time
 
 class Database:
     data: dict[str, Any]
@@ -32,10 +33,16 @@ class Database:
     def get_player_name(self, author_id: int) -> str:
         return self.data[str(author_id)]["name"]
     
+    def get_last_drop(self, author_id: int) -> int:
+        return self.data[str(author_id)]["last_drop"]
+    
+    def update_last_drop(self, author_id: int) -> None:
+        self.data[str(author_id)]["last_drop"] = time()
+    
     def add_player(self, ctx) -> bool:
         a_id = str(ctx.author.id)
         if a_id not in self.data.keys():
-            self.data[a_id] = {"name": ctx.author.global_name, "balance": 100}     # TODO What do we want to save?
+            self.data[a_id] = {"name": ctx.author.global_name, "balance": 5000, "last_drop": 0}     # TODO What do we want to save?
             return True
         return False
     

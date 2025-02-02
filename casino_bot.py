@@ -16,6 +16,8 @@ from enums import GameType
 from ui import JoinUI, PlayUI, CreateUI
 from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber, Roulette
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
+from time import time
+import traceback
 
 Games: dict[(int, int), Game] = {}
 Data: Database = Database()
@@ -70,6 +72,25 @@ async def create(ctx: commands.Context):
     global Data
     await CommandHandler.create(ctx, Games, Data)
 
+# command for daily drop
+@bot.command(name='drop', help="Get your daily drop of money!")
+async def drop(ctx: commands.Context):
+    try:
+        global Data
+        if Data.data.get(str(ctx.author.id)) is None:
+            await ctx.send(f"{ctx.author.mention} You must be a member of {BOTNAME} to participate!")
+            return
+        time_since_last = time() - Data.get_last_drop(ctx.author.id)
+        if time_since_last < 86400:
+            time_to_next = 86400 - time_since_last
+            await ctx.send(f"You'll be able to get your next drop in {int(time_to_next // 3600)} hours and {int(time_to_next // (3600))} minutes")
+            return
+        Data.change_player_balance(ctx.author.id, 2000)
+        Data.update_last_drop(ctx.author.id)
+        await ctx.send(f"{ctx.author.mention} You got your daily drop of 2000 coins!")
+    except Exception as e:
+        traceback.print_exc()
+        
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
