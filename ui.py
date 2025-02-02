@@ -30,10 +30,10 @@ class JoinUI(UI):
             match self.type:
                 case GameType.BACCARAT:
                     from baccarat.ui_baccarat import BaccaratBetUI
-                    bet_ui = BaccaratBetUI(self.game)
+                    bet_ui = BaccaratBetUI(self.game, True)
                 case _:
-                    bet_ui = BetUI(self.game)
-            
+                    bet_ui = BetUI(self.game, True)
+            await CommandHandler.cmd_join(self.game, interaction, ["join"])
             await interaction.response.send_message(view=bet_ui, ephemeral=True)
         except Exception as e:
             print("Exception:", e)
@@ -76,7 +76,7 @@ class StartUI(UI):
                 await BaccaratCmdHandler.cmd_start(self.game, interaction, ["start"])
             case GameType.BLACKJACK:
                 await BlackJackCmdHandler.cmd_start(self.game, interaction, ["start"])
-        await interaction.response.send_message("Game started succesfully", delete_after=1)
+        await interaction.response.send_message("Game started succesfully", delete_after=0)
 
 class CreateUI(discord.ui.View):
     def __init__(self, games: dict[(int, int), Game], data: Database, options=[], channel_id=0):
@@ -126,19 +126,21 @@ class PlayUI(discord.ui.View):
 
 class BetUI(UI):
 
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, is_new: bool):
         super().__init__(game)
+        self.is_new = is_new
 
     @discord.ui.button(label="SET BET AMOUNT", style=discord.ButtonStyle.blurple)
     async def handle_bet_amount(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(BetModal(self.game))
+        await interaction.response.send_modal(BetModal(self.game, self.is_new))
     
 
 class BetModal(discord.ui.Modal, title="Place Your Bet"):
 
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, is_new: bool):
         super().__init__(title="Place your bet")
         self.game = game
+        self.is_new = is_new
 
         self.bet_amount: discord.ui.TextInput = discord.ui.TextInput(
             label=f"Enter your bet amount",
@@ -148,8 +150,7 @@ class BetModal(discord.ui.Modal, title="Place Your Bet"):
         self.add_item(self.bet_amount)
 
     async def on_submit(self, interaction: discord.Interaction):
-        if interaction.user.id not in self.game.players.keys():
-            await CommandHandler.cmd_join(self.game, interaction, ["join", self.bet_amount.value])
+        if self.is_new:
             await interaction.response.send_message(view=ReadyUI(self.game), ephemeral=True)
-        else:
-            await CommandHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value])
+        await CommandHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value])
+        

@@ -17,7 +17,7 @@ class BlackJackHitStandUI(UI):
         if self.game.players[interaction.user.id].state == PlayerState.PLAYING:
             await interaction.response.send_message("What si your next move?", view=BlackJackHitStandUI(self.game), ephemeral=True)
         else:
-            await interaction.response.send_message("You cannot hit anymore")
+            await interaction.response.send_message("You cannot hit anymore", ephemeral=True, delete_after=0)
 
 
     @discord.ui.button(label="STAND", style=discord.ButtonStyle.red)

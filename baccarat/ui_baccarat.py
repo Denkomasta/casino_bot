@@ -9,9 +9,10 @@ from ui import UI, ReadyUI, BetModal
 
 class BaccaratBetUI(UI):
 
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, is_new: bool):
         super().__init__(game)
         self.bet_type: str | None = None
+        self.is_new = is_new
         
     @discord.ui.select(
         placeholder="Choose your bet type...",
@@ -33,18 +34,17 @@ class BaccaratBetUI(UI):
         if self.bet_type is None:
             await interaction.response.send_message(f"Choose a bet type!", ephemeral=True)
             return
-        await interaction.response.send_modal(BaccaratBetModal(self.game, self.bet_type))
+        await interaction.response.send_modal(BaccaratBetModal(self.game, self.bet_type, self.is_new))
 
 
 class BaccaratBetModal(BetModal):
 
-    def __init__(self, game: Game, type: str):
-        super().__init__(game)
+    def __init__(self, game: Game, type: str, is_new: bool):
+        super().__init__(game, is_new)
         self.bet_type = type
     
     async def on_submit(self, interaction: discord.Interaction):
-        if interaction.user.id not in self.game.players.keys():
-            await BaccaratCmdHandler.cmd_join(self.game, interaction, ["join", self.bet_amount.value, self.bet_type])
+        if self.is_new:
             await interaction.response.send_message(view=ReadyUI(self.game), ephemeral=True)
-        else:
-            await BaccaratCmdHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value, self.bet_type])
+        await BaccaratCmdHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value, self.bet_type])
+            

@@ -148,7 +148,7 @@ class BlackJackCmdHandler(CommandHandler):
         game.round_restart()
         from ui import ReadyUI, BetUI, JoinLeaveUI
         await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.BLACKJACK))
-        await game.channel.send("Do you want to change your bet??", view=BetUI(game))
+        await game.channel.send("Do you want to change your bet??", view=BetUI(game, False))
         await game.channel.send("Are you ready for the next game?", view=ReadyUI(game))
     
 

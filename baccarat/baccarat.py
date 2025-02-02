@@ -13,9 +13,9 @@ class BaccaratBet(Bet):
 
 class BaccaratPlayer(Player):
 
-    def __init__(self, player_info: discord.Member | discord.User, bet: int, type: int):
-        super().__init__(player_info, bet)
-        self.bet = BaccaratBet(bet, type)
+    def __init__(self, player_info: discord.Member | discord.User):
+        super().__init__(player_info)
+        self.bet = BaccaratBet(0, BaccaratBetType.UNDEFINED)
 
 class BaccaratFigure(CardPlayer):
     count: int
@@ -126,8 +126,3 @@ class Baccarat(CardGame):
             player.bet.result = PlayerResult.UNDEFINED
             player.bet.winning = 0
         self.collect_bets()
-
-
-    def add_player(self, player_info: discord.Member | discord.User, bet: int, type: int):
-        super().add_player(player_info, bet)
-        self.players[player_info.id].bet.type = type

@@ -91,23 +91,20 @@ class CommandHandler:
     @staticmethod
     async def cmd_join(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
         """Handles the 'join' command."""
-        if (len(args) > 2):
-            await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be < 2", source)
-            return
         if (game.state == GameState.RUNNING):
             await CommandHandler.send(f"Game is running, wait for the end", source)
             return
-        bet = 0
-        if (len(args) == 2):
-            try:
-                bet = int(args[1])
-            except Exception as _:
-                await CommandHandler.send(f"Argument [bet] has to be number, try again", source, ephemeral=True)
-                return
-        if (game.add_player(CommandHandler.get_info(source), bet) == E.INV_STATE):
+        if (game.add_player(CommandHandler.get_info(source)) == E.INV_STATE):
              await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True)
              return
-        await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game! {('Your bet is set to 0, use !bj bet [number] to change it.' if bet == 0 else f' Bet set to {bet}.')}")
+        await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
+        if len(args) > 1:
+            match game.type:
+                case GameType.BACCARAT:
+                    from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
+                    await BaccaratCmdHandler.cmd_bet(game, source, args)
+                case GameType.BLACKJACK:
+                    await CommandHandler.cmd_bet(game, source, args)
 
     @staticmethod
     async def cmd_bet(game: Game, source: commands.Context | discord.Interaction, args: list[str]):

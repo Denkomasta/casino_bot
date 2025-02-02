@@ -40,16 +40,16 @@ class Player(ABC):
     state: PlayerState
     player_info: discord.User | discord.Member
 
-    def __init__(self, player_info: discord.User | discord.Member, bet: int):
-        self.bet = Bet(bet)
+    def __init__(self, player_info: discord.User | discord.Member):
+        self.bet = Bet(0)
         self.state = PlayerState.NOT_READY
         self.player_info = player_info
 
 class CardPlayer(Player):
     cards: list[Card]
 
-    def __init__(self, player_info: discord.User | discord.Member, bet: int):
-        super().__init__(player_info, bet)
+    def __init__(self, player_info: discord.User | discord.Member):
+        super().__init__(player_info)
         self.cards = []
 
     def show_cards(self) -> str:
@@ -76,18 +76,17 @@ class Game(ABC):
         self.data = data
         self.channel = channel
 
-    def add_player(self,  player_info: discord.User | discord.Member, bet: int) -> E:
+    def add_player(self,  player_info: discord.User | discord.Member) -> E:
         if (self.players.get(player_info.id) is not None):
             return E.INV_STATE
     
         match self.type:
             case GameType.BLACKJACK:
                 from blackjack.black_jack import BlackJackPlayer
-                self.players[player_info.id] = BlackJackPlayer(player_info, bet)
+                self.players[player_info.id] = BlackJackPlayer(player_info)
             case GameType.BACCARAT:
                 from baccarat.baccarat import BaccaratPlayer
-                self.players[player_info.id] = BaccaratPlayer(player_info, bet, BaccaratBetType.UNDEFINED)
-        self.collect_bet(player_info, 0, bet)
+                self.players[player_info.id] = BaccaratPlayer(player_info)
         return E.SUCCESS
     
     def remove_player(self, player_info: discord.User | discord.Member) -> E:

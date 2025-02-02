@@ -8,8 +8,8 @@ from base_classes import CardGame, CardPlayer, Card, Player
 
 class BlackJackPlayer(CardPlayer):
 
-    def __init__(self, player_info: discord.User | discord.Member, bet: int=0):
-        super().__init__(player_info, bet)
+    def __init__(self, player_info: discord.User | discord.Member):
+        super().__init__(player_info)
     
     def count_cards(self) -> int:
         count_a1: int = 0
