@@ -10,7 +10,7 @@ from ascii_obj import Ascii
 
 class RNGPlayer(Player):
     def __init__(self, player_info):
-        super().__init__(player_info, None)
+        super().__init__(player_info)
 
 class RNGBet:
     player: RNGPlayer
@@ -23,7 +23,7 @@ class RNGBet:
         self.odd = odd
         self.possible_winning = self.bet * self.odd
 
-class RNGGame(Game, ABC):
+class RNGGame(Game):
     name: str
     lowest: int
     highest: int
@@ -32,7 +32,7 @@ class RNGGame(Game, ABC):
     last_roll: int | None
     database: Database
     def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType, channel: discord.TextChannel):
-        super().__init__(database, gametype, channel)
+        super().__init__(database, channel, gametype)
         self.database = database
         self.name = name
         self.lowest = lowest
@@ -43,13 +43,13 @@ class RNGGame(Game, ABC):
 
     def add_player(self, player_info: discord.User | discord.Member) -> E:
         if self.players.get(player_info.id, None) is not None:
-            return E.INV_PLAYER
+            return E.INV_STATE
         self.players[player_info.id] = RNGPlayer(player_info)
         return E.SUCCESS
 
     def remove_player(self, player_info: discord.User | discord.Member) -> E:
         if self.players.get(player_info.id, None) is None:
-            return E.INV_PLAYER
+            return E.INV_STATE
         self.players.pop(player_info.id)
         return E.SUCCESS
     
@@ -61,7 +61,7 @@ class RNGGame(Game, ABC):
         if bet_amount > self.database.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
-        existing_bet = self.find_duplicite_bet(player_info.id, number)
+        existing_bet = self.find_duplicite_bet(player_info, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
@@ -124,10 +124,10 @@ class RNGGame(Game, ABC):
     def unready(self, player_info: discord.User | discord.Member) -> E:
         if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        if not self.players[player_info.id].state == PlayerState.READY:
+        if self.players[player_info.id].state == PlayerState.NOT_READY:
             return E.INV_STATE
 
-        self.players[player_info.id].state = PlayerState.READY
+        self.players[player_info.id].state = PlayerState.NOT_READY
         return E.SUCCESS
 
     def check_ready(self) -> bool:
@@ -170,7 +170,7 @@ class RNGGame(Game, ABC):
     def get_status_msg(self):
         message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
         for player in self.players.values():
-            message += (player.name + " - " + ("Ready" if player.ready else "Not ready") + "\n")
+            message += (player.player_info.display_name + " - " + ("Ready" if player.state == PlayerState.READY else "Not ready") + "\n")
         return message + "The game will start rolling automatically after everyone is ready!"
 
     @abstractmethod
@@ -280,7 +280,7 @@ class RollTheDice(RNGGame):
         message += Ascii.draw_dice([self.last_dice1, self.last_dice2])
         message += f"We got a sum of {self.last_roll}!"
         if self.last_dice1 == self.last_dice2:
-            message += f"On top of that, we got DOUBLE {self.last_dice1}"
+            message += f" On top of that, we got DOUBLE {self.last_dice1}"
         message += '\n' + self.build_winners_message(winning_bets) + '\n'
         return message
     

@@ -4,6 +4,7 @@ from enums import E, CoinflipSides
 from typing import Callable, Awaitable
 from cmd_handler import CommandHandler
 import discord
+from ui import JoinLeaveUI
 
 class RNGCmdHandler(CommandHandler):
     
@@ -15,26 +16,26 @@ class RNGCmdHandler(CommandHandler):
     async def inv_args_message(game: RNGGame, source: commands.Context | discord.Interaction):
         await CommandHandler.send(f"Invalid arguments, run !{game.name} help for available commands", source, ephemeral=True)
 
-    @staticmethod
-    async def command_join(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
-        if len(argv) > 2:
-            await RNGCmdHandler.inv_args_message(game, source)
-            return
-        cmd_status: E = game.add_player(CommandHandler.get_info(source))
-        if cmd_status == E.INV_PLAYER:
-            await CommandHandler.send(f"Player {CommandHandler.get_info(source).mention} is already in-game", source, ephemeral=True)
-            return
-        if cmd_status == E.INSUFFICIENT_FUNDS:
-            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You don't have enough money in your server balance!", source, ephemeral=True)
-            return
-        await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully joined the game! You can now place bets with !{game.name} bet!", source)
+    # @staticmethod
+    # async def command_join(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
+    #     if len(argv) > 2:
+    #         await RNGCmdHandler.inv_args_message(game, source)
+    #         return
+    #     cmd_status: E = game.add_player(CommandHandler.get_info(source))
+    #     if cmd_status == E.INV_PLAYER:
+    #         await CommandHandler.send(f"Player {CommandHandler.get_info(source).mention} is already in-game", source, ephemeral=True)
+    #         return
+    #     if cmd_status == E.INSUFFICIENT_FUNDS:
+    #         await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You don't have enough money in your server balance!", source, ephemeral=True)
+    #         return
+    #     await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully joined the game! You can now place bets with !{game.name} bet!", source)
 
-    @staticmethod
-    async def command_leave(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
-        cmd_status: E = game.remove_player(CommandHandler.get_info(source))
-        if cmd_status == E.INV_PLAYER:
-            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game!", source, ephemeral=True)
-        await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully left the game. \n{CommandHandler.get_info(source).mention} Your server balance was updated!", source)
+    # @staticmethod
+    # async def command_leave(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
+    #     cmd_status: E = game.remove_player(CommandHandler.get_info(source))
+    #     if cmd_status == E.INV_PLAYER:
+    #         await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game!", source, ephemeral=True)
+    #     await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully left the game. \n{CommandHandler.get_info(source).mention} Your server balance was updated!", source)
 
     @staticmethod
     async def command_bet(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
@@ -79,7 +80,7 @@ class RNGCmdHandler(CommandHandler):
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{game.name} join to participate", source, ephemeral=True)
             return
         message = game.get_status_msg()
-        await CommandHandler.send(f"```{message}```", source)
+        await CommandHandler.send(f"```{message}```", source, ephemeral=True)
     
     @staticmethod
     async def command_betlist(game: RNGGame, source: commands.Context | discord.Interaction, argv: list[str]):
@@ -90,12 +91,12 @@ class RNGCmdHandler(CommandHandler):
         if message is None:
             await CommandHandler.send("An error occured listing the bets", source, ephemeral=True)
             return
-        await CommandHandler.send(f"```{message}```", source)
+        await CommandHandler.send(f"```{message}```", source, ephemeral=True)
 
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
-            "join": command_join,
+            "join": CommandHandler.cmd_join,
             "bet": command_bet,
-            "leave": command_leave,
+            "leave": CommandHandler.cmd_leave,
             "ready": command_ready,
             "unready": command_unready,
             "help": command_help,
@@ -150,7 +151,7 @@ class CoinflipCmdHandler(RNGCmdHandler):
     async def command_ready(game, source, argv):
         await RNGCmdHandler.command_ready(game, source, argv)
         if game.check_ready():
-            await CommandHandler.send("All players are ready! Rolling!", source)
+            await game.channel.send("All players are ready! Rolling!")
             await CoinflipCmdHandler.subcommand_roll(game, source, argv)
 
     #Override
@@ -158,12 +159,16 @@ class CoinflipCmdHandler(RNGCmdHandler):
     async def subcommand_roll(game, source, argv):
         winning_bets: list[RNGBet] = game.roll()
         side = "HEADS" if CoinflipSides(game.last_roll) == CoinflipSides.HEADS else "TAILS"
-        await CommandHandler.send(f"The winning side is: {side}!", source)
-        await CommandHandler.send(game.build_winners_message(winning_bets), source)
+        conclusion_message = f"The winning side is: {side}!\n" + 25 * '-' + '\n' + game.build_winners_message(winning_bets) + '\n'
         if game.give_winnings(winning_bets) == E.INV_PLAYER:
-            await CommandHandler.send(f"One or more players could not collect their winning because they left the game :(", source)
+            await game.channel.send(f"One or more players could not collect their winning because they left the game :(")
         game.restart_game()
-        await CommandHandler.send(f"The game has been restarted, bet and try your luck again!", source)
+        conclusion_message += 25 * '-' + '\n'
+        conclusion_message += f"The game has been restarted, bet and try your luck again!"
+        await game.channel.send(f"```{conclusion_message}```")
+        await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
+        from rng_games.ui_rng import CoinflipUserInterface
+        await game.channel.send(f"Or you can stay and bet again!", view=CoinflipUserInterface(game))
 
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
         "bet": command_bet,
@@ -201,7 +206,7 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{game.name} join to participate", source, ephemeral=True)
             return
         if cmd_status == E.OUT_OF_RANGE:
-            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The number you have written is out of range, bet on sums between 2 and 12 or on doubles", source, ephemeral=True)
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The number you have written is out of range, bet on sums between 2 and 12 or on between 1 and 6 on doubles", source, ephemeral=True)
             return
         if cmd_status == E.INSUFFICIENT_FUNDS:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You don't have enough money in your balance. Try again with less!", source, ephemeral=True)
@@ -217,7 +222,7 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
     async def command_ready(game: RollTheDice, source, argv):
         await RNGCmdHandler.command_ready(game, source, argv)
         if game.check_ready():
-            await CommandHandler.send("All players are ready! Rolling!", source)
+            await game.channel.send("All players are ready! Rolling!")
             await RollTheDiceCmdHandler.subcommand_roll(game, source, argv)
 
     #Override
@@ -229,7 +234,10 @@ class RollTheDiceCmdHandler(RNGCmdHandler):
            conclusion_message += f"One or more players could not collect their winning because they left the game :(\n"
         game.restart_game()
         conclusion_message += f"The game has been restarted, bet and try your luck again!"
-        await CommandHandler.send(f"```{conclusion_message}```", source)
+        await game.channel.send(f"```{conclusion_message}```")
+        await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
+        from rng_games.ui_rng import RollTheDiceUserInterface
+        await game.channel.send(f"Or you can stay and bet again!", view=RollTheDiceUserInterface(game))
 
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
         "bet": command_bet,

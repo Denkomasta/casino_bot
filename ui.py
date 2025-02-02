@@ -31,6 +31,12 @@ class JoinUI(UI):
                 case GameType.BACCARAT:
                     from baccarat.ui_baccarat import BaccaratBetUI
                     bet_ui = BaccaratBetUI(self.game, True)
+                case GameType.COINFLIP:
+                    from rng_games.ui_rng import CoinflipUserInterface
+                    bet_ui = CoinflipUserInterface(self.game)
+                case GameType.ROLLTHEDICE:
+                    from rng_games.ui_rng import RollTheDiceUserInterface
+                    bet_ui = RollTheDiceUserInterface(self.game)
                 case _:
                     bet_ui = BetUI(self.game, True)
             await CommandHandler.cmd_join(self.game, interaction, ["join"])
