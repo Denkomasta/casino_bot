@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 from base_classes import Game
 from ui import UI, BetModal, ReadyUI, GameUserInterface
-from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler
-from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
+from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
+from rng_games.rng_games import Coinflip, RollTheDice, RNGGame, GuessTheNumber
 from abc import ABC
 from enums import GameType
 import traceback
@@ -158,3 +158,40 @@ class RTDBetModal(discord.ui.Modal, title="Place your bet"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await RollTheDiceCmdHandler.command_bet(self.game, interaction, ["bet", self.bet_type, self.number_input.value, self.amount_input.value])
+
+
+class GuessNumberUserInterface(GameUserInterface):
+    def __init__(self, game: Game):
+        super().__init__(game)
+    
+    @discord.ui.button(label="SET GUESS", style=discord.ButtonStyle.blurple, row=1)
+    async def handle_bet_amount(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await interaction.response.send_modal(GTNBetModal(self.game))
+        except Exception as e:
+            traceback.print_exc()
+
+
+class GTNBetModal(discord.ui.Modal, title="Place your guess"):
+    def __init__(self, game):
+        super().__init__()
+        self.game = game
+
+        self.number_input = discord.ui.TextInput(
+            label="Enter your guess number [1-100]:",
+            placeholder="e.g. 50",
+            required=True,
+            min_length=1,
+        )
+        self.add_item(self.number_input)
+
+        self.amount_input = discord.ui.TextInput(
+            label="Enter your bet amount:",
+            placeholder="e.g. 100",
+            required=True,
+            min_length=1,
+        )
+        self.add_item(self.amount_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await GuessNumberCmdHandler.command_guess(self.game, interaction, ["guess", self.number_input.value, self.amount_input.value])

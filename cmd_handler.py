@@ -79,6 +79,8 @@ class CommandHandler:
                 game = Coinflip(data, source.channel)
             case GameType.ROLLTHEDICE:
                 game = RollTheDice(data, source.channel)
+            case GameType.GUESSNUMBER:
+                game = GuessTheNumber(data, source.channel)
             case _:
                 await CommandHandler.send("Not implemented yet", source)
                 return

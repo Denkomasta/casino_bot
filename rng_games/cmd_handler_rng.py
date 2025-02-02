@@ -293,11 +293,11 @@ class RouletteCmdHandler(RNGCmdHandler):
 class GuessNumberCmdHandler(RNGCmdHandler):
 
     @staticmethod
-    async def command_ready(game, ctx, argv):      # TODO add check if everyone has a bet
-        await RNGCmdHandler.command_ready(game, ctx, argv)
+    async def command_ready(game, source, argv):    # TODO exactly one guess per person
+        await RNGCmdHandler.command_ready(game, source, argv)
         if game.check_ready():
-            await ctx.send("All players are ready! Evaluating!")
-            await GuessNumberCmdHandler.subcommand_roll(game, ctx, argv)
+            await game.channel.send("All players are ready! Evaluating the guesses!")   
+            await GuessNumberCmdHandler.subcommand_roll(game, source, argv)
     
     @staticmethod
     async def subcommand_roll(game: GuessTheNumber, ctx, argv):
@@ -308,49 +308,56 @@ class GuessNumberCmdHandler(RNGCmdHandler):
 
         winning_bets: list[RNGBet] = game.bets[winning_number]
         game.remaining_rounds -= 1
+        from rng_games.ui_rng import GuessNumberUserInterface
+        from ui import JoinLeaveUI
         if len(winning_bets) > 0:
             game.give_winnings(winning_bets)
             await ctx.send(game.build_winners_message(winning_bets))
             game.restart_game()
             await ctx.send(f"The game has been restarted, winning number was: {winning_number}, bet and try your luck again!")
+            await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
+            await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
             return
 
         if game.remaining_rounds == 0:
             game.restart_game()
             await ctx.send(f"The game has no champion, the winning number was: {winning_number}! Game has been restarted, bet and try your luck again!")
+            await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
+            await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
             return
 
         await ctx.send(f"No winners this round! Change your guesses and try again!")
         for player in game.players.values():
-            player.ready = False
+            player.state = False
         
         for number, bets in game.bets.items():
             for bet in bets:
-                user = ctx.guild.get_member(bet.player.player_id)       # TODO change player_id in RNGplayer to discord author.
+                user = bet.player.player_info       # TODO change player_id in RNGplayer to discord author.
                 if number > winning_number:
-                    await user.send(f"{bet.player.name} your number was too **high**!")   # TODO Change to ephemeral interaction
+                    await user.send(f"{user.name} your number was too **high**!")   # TODO Change to ephemeral interaction
                 else:
-                    await user.send(f"{bet.player.name} your number was too **low**!")
+                    await user.send(f"{user.name} your number was too **low**!")
+        await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
             
     # TODO only one guess
     @staticmethod
-    async def command_guess(game: GuessTheNumber, ctx, argv):   # !gtn guess [number] [amount]
+    async def command_guess(game: GuessTheNumber, source: commands.Context | discord.Interaction, argv: list[str]):   # !gtn guess [number] [amount]
         if len(argv) != 3:      # TODO possible 2 args when u dont want to change amount
-            await RNGCmdHandler.inv_args_message(game, ctx)
+            await RNGCmdHandler.inv_args_message(game, source)
             return
         try:
             number = int(argv[1])
             amount = int(argv[2])
         except ValueError:
-            await ctx.send(f"Invalid format of the command, the number and the amount must be a whole number.")
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You passed an invalid guess, type !gtn guess [number] [amount] to place a guess", source, ephemeral=True)
             return
-        cmd_status: E = game.change_bet(ctx.author.id, amount, number, (game.highest - game.lowest + 1) // game.rounds)     # TODO change odds with logarithm
+        cmd_status: E = game.change_bet(CommandHandler.get_info(source), amount, number, (game.highest - game.lowest + 1) // game.rounds)     # TODO change odds with logarithm
         if cmd_status == E.INV_PLAYER:
-            await ctx.send(f"{ctx.message.author.mention} You are not in the game! You must use !{game.name} join to participate")
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{game.name} join to participate", source, ephemeral=True)
         if cmd_status == E.INSUFFICIENT_FUNDS:
-            await ctx.send(f"{ctx.message.author.mention} You don't have enough money in your balance. Try again with less!")
+            await CommandHandler.send(f"{CommandHandler.get_info(source)} You don't have enough money in your balance. Try again with less!", source, ephemeral=True)
             return
-        await ctx.send(f"Player {ctx.author.display_name} has successfully bet {amount} on number {number}, good luck!")
+        await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} has successfully bet {amount} on number {number}, good luck!", source, ephemeral=True)
     
 
     @staticmethod
@@ -358,7 +365,7 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         command = argv[0]
         if GuessNumberCmdHandler.commands_dict.get(command, None) is None:
             if RNGCmdHandler.commands_dict.get(command, None) is None:
-                await ctx.send(f"Unknown command, run !help {game.name} for available commands")
+                await ctx.send(f"Unknown command, run !help {game.name} for available commands", ephemeral=True)
                 return
             await RNGCmdHandler.commands_dict[command](game, ctx, argv)
             return

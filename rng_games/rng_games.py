@@ -86,7 +86,7 @@ class RNGGame(Game):
             return E.OUT_OF_RANGE
         temp = self.find_bet_by_player(player_info.id)
         if temp is None:
-            return self.place_bet(player_info.id, new_bet_amount, new_number, new_odd)
+            return self.place_bet(player_info, new_bet_amount, new_number, new_odd)
 
         existing_bet = self.bets[temp[0]][temp[1]]
         number, index = temp
@@ -186,10 +186,10 @@ class Coinflip(RNGGame):
 class GuessTheNumber(RNGGame):
     rounds: int
     remaining_rounds: int
-    def __init__(self, data: Database):
-        self.rounds = 3
+    def __init__(self, data: Database, channel: discord.TextChannel):
+        self.rounds = 4
         self.remaining_rounds = self.rounds
-        super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER)
+        super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER, channel)
     
     def get_bets_msg(self):
         pass

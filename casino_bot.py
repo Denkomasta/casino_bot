@@ -424,7 +424,7 @@ async def GuessNumber(ctx: commands.Context, *, arg_str: str):
             return
 
         try:
-            Games[key] = GuessTheNumber(Data)
+            Games[key] = GuessTheNumber(Data, ctx.channel)
         except Exception as e:
             print(f"Error creating game: {e}")
             await ctx.send(f'Error creating game')
