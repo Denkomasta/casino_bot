@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod # Importing abstract classes functionality
 from random import randrange
 import discord
+import math
 from discord.ext import commands
 from enums import E, GameType, CoinflipSides, RTDDoubles, PlayerState
 from typing import Callable, Awaitable, Type
@@ -84,7 +85,7 @@ class RNGGame(Game):
             return E.INV_PLAYER
         if new_number < self.lowest or new_number > self.highest:
             return E.OUT_OF_RANGE
-        temp = self.find_bet_by_player(player_info.id)
+        temp = self.find_bet_by_player(player_info)
         if temp is None:
             return self.place_bet(player_info, new_bet_amount, new_number, new_odd)
 
@@ -185,14 +186,28 @@ class Coinflip(RNGGame):
 
 class GuessTheNumber(RNGGame):
     rounds: int
-    remaining_rounds: int
+    curr_round: int
     def __init__(self, data: Database, channel: discord.TextChannel):
         self.rounds = 4
-        self.remaining_rounds = self.rounds
+        self.curr_round = 1
         super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER, channel)
     
     def get_bets_msg(self):
-        pass
+        message = f"Current bets are as follows:\n" + 25 * '-' + '\n'
+        try:
+            for number in range(1, self.highest + 1):
+                if len(self.bets[number]) == 0:
+                    continue
+                message += f"{number}: " + self.list_bets(number) + "\n"
+        except ValueError:
+            return None
+        return message
+
+    def compute_odds(self) -> int:
+        if self.rounds >= math.log((self.highest - self.lowest + 1), 2):
+            return 1
+
+        return math.ceil(2**(self.rounds) / (self.highest - self.lowest + 1))
 
 class RollTheDice(RNGGame):
     def __init__(self, data: Database, channel: discord.TextChannel):
