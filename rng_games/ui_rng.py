@@ -173,12 +173,12 @@ class GuessNumberUserInterface(GameUserInterface):
 
 
 class GTNBetModal(discord.ui.Modal, title="Place your guess"):
-    def __init__(self, game):
+    def __init__(self, game: GuessTheNumber):
         super().__init__()
         self.game = game
 
         self.number_input = discord.ui.TextInput(
-            label="Enter your guess number [1-100]:",
+            label=f"Enter your guess number [{game.lowest}-{game.highest}]:",
             placeholder="e.g. 50",
             required=True,
             min_length=1,
@@ -194,4 +194,8 @@ class GTNBetModal(discord.ui.Modal, title="Place your guess"):
         self.add_item(self.amount_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await GuessNumberCmdHandler.command_guess(self.game, interaction, ["guess", self.number_input.value, self.amount_input.value])
+        try:
+            await GuessNumberCmdHandler.command_guess(self.game, interaction, ["guess", self.number_input.value, self.amount_input.value])
+        except Exception as e:
+            print(e)
+            traceback.print_exc()

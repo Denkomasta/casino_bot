@@ -452,6 +452,7 @@ async def GuessNumber(ctx: commands.Context, *, arg_str: str):
             return
 
         await ctx.send(f'Game was created, join the game using \'join\'')
+        await ctx.send(view=JoinUI(Games[key], GameType.GUESSNUMBER))
         return
     if (argv[0] == "exit"):
         if (key not in Games.keys()):

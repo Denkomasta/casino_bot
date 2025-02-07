@@ -300,49 +300,51 @@ class GuessNumberCmdHandler(RNGCmdHandler):
             await GuessNumberCmdHandler.subcommand_roll(game, source, argv)
     
     @staticmethod
-    async def subcommand_roll(game: GuessTheNumber, ctx, argv):
+    async def subcommand_roll(game: GuessTheNumber, source: commands.Context | discord.Interaction, argv: list[str]):
         winning_number = game.last_roll
         if winning_number is None:
             game.roll()
             winning_number = game.last_roll
 
         winning_bets: list[RNGBet] = game.bets[winning_number]
-        game.remaining_rounds -= 1
+        game.curr_round += 1
         from rng_games.ui_rng import GuessNumberUserInterface
         from ui import JoinLeaveUI
         if len(winning_bets) > 0:
             game.give_winnings(winning_bets)
-            await ctx.send(game.build_winners_message(winning_bets))
+            await CommandHandler.send(game.build_winners_message(winning_bets), source)
             game.restart_game()
-            await ctx.send(f"The game has been restarted, winning number was: {winning_number}, bet and try your luck again!")
+            await CommandHandler.send(f"The game has been restarted, winning number was: {winning_number}, bet and try your luck again!", source)
             await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
-            await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
             return
 
-        if game.remaining_rounds == 0:
+        if game.curr_round > game.rounds:
             game.restart_game()
-            await ctx.send(f"The game has no champion, the winning number was: {winning_number}! Game has been restarted, bet and try your luck again!")
-            await game.channel.send(f"Do you want to join the game? Or are you bored already?", view=JoinLeaveUI(game, game.type))
-            await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
+            await CommandHandler.send(f"The game has no champion, the winning number was: {winning_number}! Game has been restarted, bet and try your luck again!", source)
+            await game.channel.send(f"Do you want to join the game? Or are you already bored?", view=JoinLeaveUI(game, game.type))
             return
 
-        await ctx.send(f"No winners this round! Change your guesses and try again!")
+        await game.channel.send(f"No winners this round! Change your guesses and try again!")
         for player in game.players.values():
             player.state = False
         
         for number, bets in game.bets.items():
-            for bet in bets:
-                user = bet.player.player_info       # TODO change player_id in RNGplayer to discord author.
-                if number > winning_number:
-                    await user.send(f"{user.name} your number was too **high**!")   # TODO Change to ephemeral interaction
-                else:
-                    await user.send(f"{user.name} your number was too **low**!")
-        await game.channel.send(f"Or you can stay and bet again!", view=GuessNumberUserInterface(game))
+            for bet in bets:    # Not ideal complexity
+                try:
+                    if bet.player.player_info.id == CommandHandler.get_id(source):
+                        if number > winning_number:
+                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name}, your number ({number}) was too **high**!", source, ephemeral=True)
+                        else:
+                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name} your number ({number}) was too **low**!", source, ephemeral=True)
+                        break
+                except Exception as e:
+                    print(e)
+        await game.channel.send(f"Guess again, the round {game.curr_round} is waiting for your luck!", view=GuessNumberUserInterface(game))
             
     # TODO only one guess
     @staticmethod
     async def command_guess(game: GuessTheNumber, source: commands.Context | discord.Interaction, argv: list[str]):   # !gtn guess [number] [amount]
-        if len(argv) != 3:      # TODO possible 2 args when u dont want to change amount
+        if len(argv) != 3:
             await RNGCmdHandler.inv_args_message(game, source)
             return
         try:
@@ -351,7 +353,7 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         except ValueError:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You passed an invalid guess, type !gtn guess [number] [amount] to place a guess", source, ephemeral=True)
             return
-        cmd_status: E = game.change_bet(CommandHandler.get_info(source), amount, number, (game.highest - game.lowest + 1) // game.rounds)     # TODO change odds with logarithm
+        cmd_status: E = game.change_bet(CommandHandler.get_info(source), amount, number, game.compute_odds())
         if cmd_status == E.INV_PLAYER:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{game.name} join to participate", source, ephemeral=True)
         if cmd_status == E.INSUFFICIENT_FUNDS:

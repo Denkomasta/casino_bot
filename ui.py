@@ -7,7 +7,7 @@ from baccarat.baccarat import BaccaratPlayer, BaccaratBet
 from cmd_handler import CommandHandler
 from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
-from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler
+from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
 from database import Database
 from abc import ABC
@@ -40,6 +40,9 @@ class JoinUI(UI):
                 case GameType.ROLLTHEDICE:
                     from rng_games.ui_rng import RollTheDiceUserInterface
                     bet_ui = RollTheDiceUserInterface(self.game)
+                case GameType.GUESSNUMBER:
+                    from rng_games.ui_rng import GuessNumberUserInterface
+                    bet_ui = GuessNumberUserInterface(self.game)
                 case _:
                     bet_ui = BetUI(self.game)
             await CommandHandler.cmd_join(self.game, interaction, ["join"])
@@ -90,6 +93,9 @@ class StartUI(UI):
             case GameType.ROLLTHEDICE:
                 await self.game.channel.send("All players are ready! Rolling!")
                 await RollTheDiceCmdHandler.subcommand_roll(self.game, interaction, ["start"])
+            case GameType.GUESSNUMBER:
+                await self.game.channel.send("All players are ready! Evaluating!")
+                await GuessNumberCmdHandler.subcommand_roll(self.game, interaction, ["start"])
         await interaction.response.send_message("Game started succesfully", delete_after=0)
 
 class CreateUI(discord.ui.View):
@@ -174,6 +180,8 @@ class GameUserInterface(UI, ABC):
                 await BlackJackCmdHandler.cmd_status(self.game, interaction, ["status"])
             case GameType.BACCARAT:
                 await BaccaratCmdHandler.cmd_status(self.game, interaction, ["status"])
+            case GameType.GUESSNUMBER:
+                await GuessNumberCmdHandler.command_status(self.game, interaction, ["status"])
             case _:
                 await interaction.response.send_message("Not implemented yet", ephemeral=True)
 
@@ -192,6 +200,8 @@ class GameUserInterface(UI, ABC):
                 await BaccaratCmdHandler.cmd_betlist(self.game, interaction, ["betlist"])
             case GameType.BLACKJACK:
                 await BlackJackCmdHandler.cmd_betlist(self.game, interaction, ["betlist"])
+            case GameType.GUESSNUMBER:
+                await GuessNumberCmdHandler.command_betlist(self.game, interaction, ["betlist"])
             case _:
                 await interaction.response.send_message("Not implemented yet", ephemeral=True)
 
