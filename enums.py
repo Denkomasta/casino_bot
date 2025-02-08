@@ -31,6 +31,12 @@ class PlayerState(IntEnum):
     NOT_READY = 2
     FINISHED = 3
 
+class PokerPlayerState(PlayerState):
+    WAITING = 4
+    CHECKED = 5
+    FOLDED = 6
+    RAISED = 7
+
 class CardSuits(IntEnum):
     UNSHOWABLE = -1
     HEARTS = 0

@@ -15,18 +15,41 @@ class PokerCmdHandler(CommandHandler):
         if (args[0] not in PokerCmdHandler.command_dict.keys()):
             await CommandHandler.send("Invalid argument, use \"!help poker\" to see the options", source)
         await PokerCmdHandler.command_dict[args[0]](game, source, args)
+
+    @staticmethod
+    async def cmd_start(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
+
+    @staticmethod
+    async def cmd_check(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
+
+    @staticmethod
+    async def cmd_raise(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
+
+    @staticmethod
+    async def cmd_fold(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
+
+    @staticmethod
+    async def cmd_status(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
+
+    # Only interaction
+    @staticmethod
+    async def cmd_show_cards(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        pass
     
     command_dict: dict[str, Callable[[Poker, commands.Context | discord.Interaction, list[str]], Awaitable[None]]] = {
-        #"restart": cmd_restart,
         "join": CommandHandler.cmd_join,
         "leave": CommandHandler.cmd_leave,
-        #"start": cmd_start,
+        "start": cmd_start,
         "ready": CommandHandler.cmd_ready,
         "unready": CommandHandler.cmd_unready,
-        #"hit": cmd_hit,
-        #"stand": cmd_stand,
+        "check": cmd_check,
+        "raise": cmd_raise,
+        "fold": cmd_fold,
         "bet": CommandHandler.cmd_bet,
-        #"status": cmd_status,
-        #"betlist": cmd_betlist,
-        #"help": cmd_help
+        "status": cmd_status,
     }
