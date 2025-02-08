@@ -62,6 +62,7 @@ class Poker(CardGame):
         self.blind += 10
         self.blind_index = (self.blind_index + 1) % len(self.players)
         self.deck = self.get_new_deck()
+        self.table.cards = []
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
@@ -95,7 +96,6 @@ class Poker(CardGame):
 
     def get_blinds(self):
         self.round_bet = self.blind
-        self.bank += self.blind + (self.blind // 2)
         self.raise_bet(self.blind, self.get_player_by_index(self.blind_index).player_info)
         self.raise_bet(self.blind // 2, self.get_player_by_index(self.blind_index + 1).player_info)
 

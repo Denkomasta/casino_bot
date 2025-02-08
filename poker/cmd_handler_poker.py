@@ -35,7 +35,7 @@ class PokerCmdHandler(CommandHandler):
                     msg_txt = f"Player {game.players[coroutine_res].player_info.mention} {PokerPlayerState(view.value).name}"
                     if view.value == PokerPlayerState.RAISED:
                         msg_txt += f" on {game.round_bet}"
-                    await message.edit(content=msg_txt)
+                    await message.edit(content=msg_txt, view=None)
                 if (round == 3):
                     break
                 if (round == 0):
@@ -46,6 +46,9 @@ class PokerCmdHandler(CommandHandler):
                 game.round_restart()
             await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
             game.game_restart()
+            from ui import BetUI, JoinLeaveUI
+            await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))
+            await game.channel.send("Do you want to change your bank??", view=BetUI(game))
         except:
             traceback.print_exc()
 
