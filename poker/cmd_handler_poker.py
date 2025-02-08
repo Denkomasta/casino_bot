@@ -39,7 +39,9 @@ class PokerCmdHandler(CommandHandler):
                 game.draw_cards(3)
             else:
                 game.draw_cards(1)
-            await game.channel.send(f"{game.show_game()}")
+            await game.channel.send(f"```\n{game.show_game()}\n```")
+        await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
+        game.game_restart()
 
     @staticmethod
     async def cmd_default_action(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
@@ -102,7 +104,7 @@ class PokerCmdHandler(CommandHandler):
 
     @staticmethod
     def game_coroutine(game: Poker):
-        for round in range(4):
+        for _ in range(4):
             index_player = (game.blind_index + 2) % len(game.players)
             last_player = (index_player - 1) % len(game.players)
             while (index_player) != last_player:

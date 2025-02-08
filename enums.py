@@ -18,7 +18,6 @@ class GameType(IntEnum):
     BACCARAT = 5
     ROLLTHEDICE = 6
     GUESSNUMBER = 7
-    POKER = 8
 
 class GameState(IntEnum):
     WAITING_FOR_PLAYERS = 0
@@ -31,7 +30,11 @@ class PlayerState(IntEnum):
     NOT_READY = 2
     FINISHED = 3
 
-class PokerPlayerState(PlayerState):
+class PokerPlayerState(IntEnum):
+    PLAYING = 0
+    READY = 1
+    NOT_READY = 2
+    FINISHED = 3
     WAITING = 4
     CHECKED = 5
     FOLDED = 6

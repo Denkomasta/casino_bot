@@ -2,7 +2,7 @@ from random import randrange
 from typing import Callable, Awaitable
 import discord
 from discord.ext import commands
-from enums import E, GameState, PlayerState, GameType, PlayerResult, CardSuits, PokerRoundStatus
+from enums import E, GameState, PlayerState, GameType, PlayerResult, CardSuits, PokerRoundStatus, PokerPlayerState
 from database import Database
 from base_classes import CardGame, CardPlayer, Card, Player
 from itertools import combinations
@@ -56,11 +56,31 @@ class Poker(CardGame):
 
 
     def game_restart(self):
+        self.bank = 0
         self.blind += 10
         self.blind_index = (self.blind_index + 1) % len(self.players)
         self.deck = self.get_new_deck()
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
+            player.round_bet = 0
+
+    def show_game(self):
+        show = "Table:\n"
+        show += self.table.show_cards()
+        show += "\n"
+        show += f"Bank: |{self.bank}|\n"
+        return show
+
+    def show_players_after_game(self):
+        show = ""
+        for player in self.players.values():
+            if player.state == PokerPlayerState.FOLDED:
+                continue
+            show += f"{player.player_info.name}\n"
+            show += player.show_cards()
+            show += "\n"
+        return show
+
     
 
 
