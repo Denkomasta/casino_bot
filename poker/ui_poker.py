@@ -13,14 +13,14 @@ class PokerUI(BetUI):
         super().__init__(game)
 
 class Poker_ingame(UI):
-    def __init__(self, game: Game, id: int, is_raised = False):
+    def __init__(self, game: Poker, id: int):
         super().__init__(game)
         self.on_turn_id = id
         self.value: PokerPlayerState | None = None
 
         for item in self.children:
             if isinstance(item, discord.ui.Button) and item.label == "CHECK":
-                item.label = "CALL" if is_raised else "CHECK"
+                item.label = "CALL" if game.round_bet > game.players[id].round_bet else "CHECK"
 
     @discord.ui.button(label="CHECK", style=discord.ButtonStyle.blurple, row=0)
     async def handle_check(self, interaction: discord.Interaction, button: discord.ui.Button):

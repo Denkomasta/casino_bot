@@ -36,6 +36,7 @@ class PokerPlayerState(PlayerState):
     CHECKED = 5
     FOLDED = 6
     RAISED = 7
+    CALLED = 8
 
 class CardSuits(IntEnum):
     UNSHOWABLE = -1
@@ -67,3 +68,7 @@ class RTDDoubles(IntEnum):
     FOURS = -4
     FIVES = -5
     SIXES = -6
+
+class PokerRoundStatus(IntEnum):
+    CHECKED = 0
+    RAISED = 1

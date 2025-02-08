@@ -2,29 +2,77 @@ from random import randrange
 from typing import Callable, Awaitable
 import discord
 from discord.ext import commands
-from enums import E, GameState, PlayerState, GameType, PlayerResult, CardSuits
+from enums import E, GameState, PlayerState, GameType, PlayerResult, CardSuits, PokerRoundStatus
 from database import Database
 from base_classes import CardGame, CardPlayer, Card, Player
 from itertools import combinations
 from collections import Counter
 
+class PokerPlayer(CardPlayer):
+    def __init__(self, player_info):
+        super().__init__(player_info)
+        self.round_bet = 0
+    
+    def raise_bet(self, new_bet: int):
+        self.bet.value -= new_bet - self.round_bet
+        self.round_bet = new_bet
+
+class PokerTable(CardPlayer):
+
+    def __init__(self):
+        self.cards = []
+
+    def draw_card(self, game: CardGame):
+        self.cards.append(game.draw_card())
 
 
 class Poker(CardGame):
     
     def __init__(self, data: Database, channel: discord.TextChannel):
         super().__init__(data, channel, GameType.POKER)
-        self.players = {}
-        self.state = GameState.WAITING_FOR_PLAYERS
+        self.table: PokerTable = PokerTable()
+        self.blind = 20
+        self.blind_index = 0
+        self.round_bet = 0
+        self.bank = 0
     
     def game_start(self):
-        pass
+        self.get_blinds()
+
+        for _ in range(2):
+            for player in self.players.values():
+                player.cards.append(self.draw_card())
 
     def game_finish(self):
         pass
 
     def play_round(self):
         pass
+
+    def round_restart(self):
+        self.round_bet = 0
+        for player in self.players.values():
+            player.round_bet = 0
+
+
+    def game_restart(self):
+        self.blind += 10
+        self.blind_index = (self.blind_index + 1) % len(self.players)
+        self.deck = self.get_new_deck()
+        for player in self.players.values():
+            player.state = PlayerState.NOT_READY
+    
+
+
+    def draw_cards(self, number: int):
+        self.draw_card()
+        for i in range(number):
+            self.table.draw_card()
+
+    def get_blinds(self):
+        self.round_bet = self.blind
+        self.players.values()[self.blind_index].raise_bet(self.blind)
+        self.players.values()[(self.blind_index + 1) % len(self.players)].raise_bet(self.blind // 2)
 
     def determine_winner(self):     # use ranks and values to determine winner
         pass
