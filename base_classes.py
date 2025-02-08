@@ -25,9 +25,18 @@ class Card:
             show += "\n"
         return show
 
+class Bet:
+    value: int
+    result: int
+    winning: int
 
+    def __init__(self, value: int):
+        self.value = value
+        self.result = PlayerResult.UNDEFINED
+        self.winning = 0
 
 class Player(ABC):
+    bet: Bet
     state: PlayerState
     player_info: discord.User | discord.Member
 
@@ -54,14 +63,6 @@ class CardPlayer(Player):
         return show
     
 
-class Bet:
-    value: int
-    player: Player
-
-    def __init__(self, player: Player, value: int):
-        self.value = value
-        self.player = player
-
 
 class Game(ABC):
     type: GameType
@@ -69,7 +70,6 @@ class Game(ABC):
     state: GameState
     data: Database
     channel: discord.TextChannel
-    bets: dict[int, dict[int, Bet]]
 
     def __init__(self, data: Database, channel: discord.TextChannel, type: GameType):
         self.players = {}
@@ -77,7 +77,6 @@ class Game(ABC):
         self.type = type
         self.data = data
         self.channel = channel
-        self.bets = {}
 
     def add_player(self,  player_info: discord.User | discord.Member) -> E:
         if (self.players.get(player_info.id) is not None):
@@ -90,6 +89,9 @@ class Game(ABC):
             case GameType.BACCARAT:
                 from baccarat.baccarat import BaccaratPlayer
                 self.players[player_info.id] = BaccaratPlayer(player_info)
+            case GameType.POKER:
+                from poker.poker import PokerPlayer
+                self.players[player_info.id] = PokerPlayer(player_info)
         return E.SUCCESS
     
     def remove_player(self, player_info: discord.User | discord.Member) -> E:
@@ -124,20 +126,31 @@ class Game(ABC):
                 return False
         return True
         
-    def give_winnings(self) -> None:
-        pass
+    def collect_bet(self, player_info: discord.User | discord.Member, old: int, new: int) -> None:
+        self.data.change_player_balance(player_info.id, old - new)
 
-    def place_bet(self, player_info: discord.Member | discord.User, bet: Bet, type: int):
+    def return_bet(self, player_info: discord.User | discord.Member) -> None:
+        self.data.change_player_balance(player_info.id, self.players[player_info.id].bet.value)
+
+    def change_bet(self, player_info: discord.User | discord.Member, bet: int) -> E:
         if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        if bet.value > self.data.get_player_balance(player_info.id):
+        if (bet - self.players[player_info.id].bet.value > self.data.get_player_balance(player_info.id)):
             return E.INSUFFICIENT_FUNDS
         
-        if self.bets[type].get(player_info.id) != None and self.bets[type].get(player_info.id)
-
-        self.bets[type][player_info.id] = bet
-        self.data.change_player_balance(player_info.id, -bet.value)
+        self.collect_bet(player_info, self.players[player_info.id].bet.value,  bet)
+        self.players[player_info.id].bet.value = bet
         return E.SUCCESS
+    
+    def collect_bets(self) -> None:
+        for player in self.players.values():
+            if (player.bet.value > 0):
+                self.data.change_player_balance(player.player_info.id, -player.bet.value)
+    
+    def give_winnings(self) -> None:
+        for player in self.players.values():
+            if (player.bet.winning > 0):
+                self.data.change_player_balance(player.player_info.id, player.bet.winning)
         
 
     def check_valid_player(self, player_info: discord.User | discord.Member):

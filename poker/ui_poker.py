@@ -32,24 +32,34 @@ class Poker_ingame(UI):
         self.stop()
 
     @discord.ui.button(label="RAISE", style=discord.ButtonStyle.green, row=0)
-    async def handle_check(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.on_turn_id:
-            await interaction.response.send_message(f"{interaction.user.mention} Please wait for your turn!")
-            return
-        modal = RaiseModal(self.game, interaction.user.id)
-        await interaction.response.send_modal(modal)
-        await modal.wait()
-        self.value = PokerPlayerState.RAISED
-        self.stop()
+    async def handle_raise(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            if interaction.user.id != self.on_turn_id:
+                await interaction.response.send_message(f"{interaction.user.mention} Please wait for your turn!")
+                return
+            modal = RaiseModal(self.game, interaction.user.id)
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            self.value = PokerPlayerState.RAISED
+            self.stop()
+        except:
+            traceback.print_exc()
 
     @discord.ui.button(label="FOLD", style=discord.ButtonStyle.red, row=0)
-    async def handle_check(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def handle_fold(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.on_turn_id:
             await interaction.response.send_message(f"{interaction.user.mention} Please wait for your turn!")
             return
         await PokerCmdHandler.cmd_fold(self.game, interaction, ["fold"])
         self.value = PokerPlayerState.FOLDED
         self.stop()
+
+    @discord.ui.button(label="CARDS", style=discord.ButtonStyle.grey, row=0)
+    async def handle_cards(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await PokerCmdHandler.cmd_show_cards(self.game, interaction, ["fold"])
+        except:
+            traceback.print_exc()
 
 class RaiseModal(discord.ui.Modal, title="Place Your Bet"):
     def __init__(self, game: Poker, author_id):

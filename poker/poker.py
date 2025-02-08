@@ -63,12 +63,14 @@ class Poker(CardGame):
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
+            player.cards = []
 
     def show_game(self):
-        show = "Table:\n"
+        show = f"Bank: |{self.bank}|\n\n"
+        show += "Table:\n"
         show += self.table.show_cards()
         show += "\n"
-        show += f"Bank: |{self.bank}|\n"
+        
         return show
 
     def show_players_after_game(self):
@@ -81,18 +83,17 @@ class Poker(CardGame):
             show += "\n"
         return show
 
-    
-
 
     def draw_cards(self, number: int):
         self.draw_card()
         for i in range(number):
-            self.table.draw_card()
+            self.table.draw_card(self)
 
     def get_blinds(self):
         self.round_bet = self.blind
-        self.players.values()[self.blind_index].raise_bet(self.blind)
-        self.players.values()[(self.blind_index + 1) % len(self.players)].raise_bet(self.blind // 2)
+        self.bank += self.blind + (self.blind // 2)
+        list(self.players.values())[self.blind_index].raise_bet(self.blind)
+        list(self.players.values())[(self.blind_index + 1) % len(self.players)].raise_bet(self.blind // 2)
 
     def determine_winner(self):     # use ranks and values to determine winner
         pass

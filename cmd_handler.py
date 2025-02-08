@@ -5,6 +5,7 @@ from base_classes import Game
 from blackjack.black_jack import BlackJack
 from baccarat.baccarat import Baccarat
 from rng_games.rng_games import RNGGame, RNGBet, Coinflip, RollTheDice, GuessTheNumber
+from poker.poker import Poker
 from abc import ABC, abstractmethod
 from database import Database
 
@@ -81,6 +82,8 @@ class CommandHandler:
                 game = RollTheDice(data, source.channel)
             case GameType.GUESSNUMBER:
                 game = GuessTheNumber(data, source.channel)
+            case GameType.POKER:
+                game = Poker(data, source.channel)
             case _:
                 await CommandHandler.send("Not implemented yet", source)
                 return

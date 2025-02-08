@@ -3,7 +3,7 @@ from typing import Callable, Awaitable
 from discord.ext import commands
 from base_classes import Game
 from poker.poker import Poker
-from poker.ui_poker import Poker_ingame
+import traceback
 from cmd_handler import CommandHandler
 import discord
 
@@ -19,29 +19,35 @@ class PokerCmdHandler(CommandHandler):
 
     @staticmethod
     async def cmd_start(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
-        coroutine = PokerCmdHandler.game_coroutine(game)
-        for round in range(4):
-            while True:
-                coroutine_res = next(coroutine)
-                if coroutine_res == -1:
+        try:
+            coroutine = PokerCmdHandler.game_coroutine(game)
+            game.game_start()
+            for round in range(4):
+                while True:
+                    coroutine_res = next(coroutine)
+                    if coroutine_res == -1:
+                        break
+                    from poker.ui_poker import Poker_ingame
+                    view = Poker_ingame(game, coroutine_res)
+                    message = await game.channel.send(f"{game.players[coroutine_res].player_info.mention} has his turn:\n", view=view)
+                    if (await view.wait()):
+                        await PokerCmdHandler.cmd_default_action(game, source, ["whtvr"])
+                    msg_txt = f"Player {game.players[coroutine_res].player_info.mention} {PokerPlayerState(view.value).name}"
+                    if view.value == PokerPlayerState.RAISED:
+                        msg_txt += f" on {game.round_bet}"
+                    await message.edit(content=msg_txt)
+                if (round == 3):
                     break
-                view = Poker_ingame(game, coroutine_res)
-                message = game.channel.send(f"{game.players[coroutine_res].player_info.mention} has his turn:\n", view=view)
-                if view.wait():
-                    await PokerCmdHandler.cmd_default_action(game, source, ["whtvr"])
-                msg_txt = f"Player {game.players[coroutine_res].player_info.mention} {PokerPlayerState(view.value).name}"
-                if view.value == PokerPlayerState.RAISED:
-                    msg_txt += f" on {game.round_bet}"
-                await message.edit(msg_txt)
-            if (round == 3):
-                break
-            if (round == 0):
-                game.draw_cards(3)
-            else:
-                game.draw_cards(1)
-            await game.channel.send(f"```\n{game.show_game()}\n```")
-        await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
-        game.game_restart()
+                if (round == 0):
+                    game.draw_cards(3)
+                else:
+                    game.draw_cards(1)
+                await game.channel.send(f"```\n{game.show_game()}\n```")
+                game.round_restart()
+            await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
+            game.game_restart()
+        except:
+            traceback.print_exc()
 
     @staticmethod
     async def cmd_default_action(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
@@ -100,20 +106,22 @@ class PokerCmdHandler(CommandHandler):
             show += "Your cards are:\n"
         else:
             show += "Your cards were:\n"
-        await CommandHandler.send(f"```{show}{player.show_cards()}```")
+        await CommandHandler.send(f"```{show}{player.show_cards()}```", source, ephemeral=True)
 
     @staticmethod
     def game_coroutine(game: Poker):
         for _ in range(4):
             index_player = (game.blind_index + 2) % len(game.players)
-            last_player = (index_player - 1) % len(game.players)
-            while (index_player) != last_player:
-                if game.players[index_player].state == PokerPlayerState.FOLDED:
+            last_player = index_player
+            first = True
+            while (first or index_player != last_player):
+                first = False
+                if list(game.players.values())[index_player].state == PokerPlayerState.FOLDED:
                     index_player = (index_player + 1) % len(game.players)
                     continue
-                yield game.players[index_player].player_info.id
-                if game.players[index_player].state == PokerPlayerState.RAISED:
-                    last_player = (index_player - 1) % len(game.players)
+                yield list(game.players.values())[index_player].player_info.id
+                if list(game.players.values())[index_player].state == PokerPlayerState.RAISED:
+                    last_player = index_player
                 index_player = (index_player + 1) % len(game.players)
             yield (-1)
 

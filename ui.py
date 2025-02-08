@@ -97,6 +97,12 @@ class StartUI(UI):
             case GameType.GUESSNUMBER:
                 await self.game.channel.send("All players are ready! Evaluating!")
                 await GuessNumberCmdHandler.subcommand_roll(self.game, interaction, ["start"])
+            case GameType.POKER:
+                await self.game.channel.send("All players are ready! The game starts!")
+                try:
+                    await PokerCmdHandler.cmd_start(self.game, interaction, ["start"])
+                except:
+                    traceback.print_exc()
         await interaction.response.send_message("Game started succesfully", delete_after=0)
 
 class CreateUI(discord.ui.View):
@@ -163,7 +169,7 @@ class GameUserInterface(UI, ABC):
         if not self.game.check_valid_player(interaction.user):
             await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
             return
-        await CommandHandler.cmd_ready(self.game, interaction, ["ready"])
+        await CommandHandler.cmd_unready(self.game, interaction, ["ready"])
 
 
     @discord.ui.button(label="STATUS", style=discord.ButtonStyle.gray, row=3)
