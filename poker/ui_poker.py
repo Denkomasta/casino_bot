@@ -36,7 +36,9 @@ class Poker_ingame(UI):
         if interaction.user.id != self.on_turn_id:
             await interaction.response.send_message(f"{interaction.user.mention} Please wait for your turn!")
             return
-        await interaction.response.send_modal(RaiseModal(self.game, interaction.user.id))
+        modal = RaiseModal(self.game, interaction.user.id)
+        await interaction.response.send_modal(modal)
+        await modal.wait()
         self.value = PokerPlayerState.RAISED
         self.stop()
 
