@@ -73,15 +73,14 @@ class PokerCmdHandler(CommandHandler):
             return
         player = game.players.get(CommandHandler.get_id(source))
         player.state = PokerPlayerState.RAISED
-        player.raise_bet(bet_value)
-        game.round_bet = bet_value
+        game.raise_bet(bet_value, player.player_info)
         await CommandHandler.send(f"You have RAISED to {bet_value}", source, ephemeral=True)
 
     @staticmethod
     async def cmd_call(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
         player = game.players.get(CommandHandler.get_id(source))
         player.state = PokerPlayerState.CALLED
-        player.raise_bet(game.round_bet)
+        game.raise_bet(game.round_bet, player.player_info)
         await CommandHandler.send(f"You have CALLED to {game.round_bet}", source, ephemeral=True)
 
     @staticmethod

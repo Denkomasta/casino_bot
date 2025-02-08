@@ -12,10 +12,6 @@ class PokerPlayer(CardPlayer):
     def __init__(self, player_info):
         super().__init__(player_info)
         self.round_bet = 0
-    
-    def raise_bet(self, new_bet: int):
-        self.bet.value -= new_bet - self.round_bet
-        self.round_bet = new_bet
 
 class PokerTable(CardPlayer):
 
@@ -54,6 +50,12 @@ class Poker(CardGame):
         for player in self.players.values():
             player.round_bet = 0
 
+    def raise_bet(self, new_bet: int, player: discord.User | discord.Member):
+        self.bank += new_bet - self.players[player.id].round_bet
+        self.players[player.id].bet.value -= new_bet - self.players[player.id].round_bet
+        self.players[player.id].round_bet = new_bet
+        self.round_bet = new_bet
+
 
     def game_restart(self):
         self.bank = 0
@@ -83,6 +85,8 @@ class Poker(CardGame):
             show += "\n"
         return show
 
+    def get_player_by_index(self, index):
+        return list(self.players.values())[(index) % len(self.players)]
 
     def draw_cards(self, number: int):
         self.draw_card()
@@ -92,8 +96,8 @@ class Poker(CardGame):
     def get_blinds(self):
         self.round_bet = self.blind
         self.bank += self.blind + (self.blind // 2)
-        list(self.players.values())[self.blind_index].raise_bet(self.blind)
-        list(self.players.values())[(self.blind_index + 1) % len(self.players)].raise_bet(self.blind // 2)
+        self.raise_bet(self.blind, self.get_player_by_index(self.blind_index).player_info)
+        self.raise_bet(self.blind // 2, self.get_player_by_index(self.blind_index + 1).player_info)
 
     def determine_winner(self):     # use ranks and values to determine winner
         pass
