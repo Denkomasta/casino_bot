@@ -5,6 +5,8 @@ from discord.ext import commands
 from enums import E, GameState, PlayerState, GameType, PlayerResult, CardSuits
 from database import Database
 from base_classes import CardGame, CardPlayer, Card, Player
+from itertools import combinations
+from collections import Counter
 
 
 
@@ -24,251 +26,37 @@ class Poker(CardGame):
     def play_round(self):
         pass
 
-    # !!! player.cards needs to be sorted and change ace value from 1 to 14 !!!
-    def royal_flush(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        vals = [10, 11, 12, 13, 14]
-        for player in players:
-            suit: CardSuits = player.cards[0].suit
-            has = True
-            for i in range(len(player.cards)):
-                card = player.cards[i]
-                if card.suit != suit:
-                    has = False
-                    break
-                if card.value != vals[i]:
-                    has = False
-                    break
-            if has:
-                res.append(player)
-        return res
+    def determine_winner(self):     # use ranks and values to determine winner
+        pass
 
-    def straight_flush(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = 2
-        for player in players:
-            suit: CardSuits = player.cards[0].suit
-            curr_max = player.cards[-1].value
-            has = True
-            for i in range(1, len(player.cards)):
-                card = player.cards[i]
-                if card.suit != suit:
-                    has = False
-                    break
-                if card.value != player.cards[i - 1].value - 1:
-                    has = False
-                    break
-            if has:
-                if curr_max > max_val:
-                    res = [player]
-                    max_val = curr_max
-                elif curr_max == max_val:
-                    res.append(player)
-        return res
+    def best_hand(self, player: CardPlayer):
+        all_five_card_hands = combinations(player.cards, 5)
+        return max(all_five_card_hands, key=self.get_hand_rank)
 
-    def four_of_a_kind(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = 2
-        max_div = 2
-        for player in players:
-            has = True
-            curr_div = player.cards[0].value
-            if curr_div == player.cards[3].value:
-                curr_div = player.cards[4].value
-            elif player.cards[1].value == player.cards[4].value:
-                pass
-            else:
-                has = False
+    def get_hand_rank(self, hand: list[Card]):
+        values = sorted([card.value for card in hand], reverse=True)
+        suits = [card.suit for card in hand]
 
-            poker = player.cards[2].value
+        value_counts = Counter(values)
+        sorted_counts = sorted(value_counts.values(), reverse=True)
 
-            if has:
-                if poker > max_val:
-                    res = [player]
-                    max_val = poker
-                    max_div = curr_div
-                elif poker == max_val:
-                    if curr_div > max_div:
-                        res = [player]
-                        max_div = curr_div
-                    elif curr_div == max_div:
-                        res.append(player)
-        return res
+        is_flush = len(set(suits)) == 1
+        is_straight = values == list(range(values[0], values[0] - 5, -1)) or values == [14, 5, 4, 3, 2]
 
-    def full_house(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_trips = 2
-        max_pair = 2
-        for player in players:
-            has = True
-            trips = player.cards[2].value
-            pair = player.cards[0].value
-
-            if trips != player.cards[4].value:
-                pair = player.cards[4].value
-                if trips != player.cards[0].value or pair != player.cards[3].value:
-                    has = False
-                    continue
-
-            if has:
-                if trips > max_trips:
-                    res = [player]
-                    max_trips = trips
-                    max_pair = pair
-                elif trips == max_trips:
-                    if pair > max_pair:
-                        res = [player]
-                        max_pair = pair
-                    elif pair == max_pair:
-                        res.append(player)
-        return res
-
-    def flush(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_flush = [2, 2, 2, 2, 2]
-        for player in players:
-            suit: CardSuits = player.cards[0].suit
-            has = True
-            temp = []
-            for i in range(len(player.cards) - 1, -1, -1):
-                card = player.cards[i]
-                if card.suit != suit:
-                    has = False
-                    break
-                temp.append(card.value)
-
-            if has:
-                if temp > max_flush:    # TODO optimize
-                    res = [player]
-                    max_flush = temp
-                elif temp == max_flush:
-                    res.append(player)
-        return res
-
-    def straight(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = 2
-        for player in players:
-            curr_max = player.cards[-1].value
-            has = True
-            for i in range(len(player.cards)):
-                card = player.cards[i]
-                if card.value != player.cards[i - 1].value - 1:
-                    if i == 4 and card.value == 14 and player.cards[3].value == 5:
-                        curr_max = 5
-                        continue
-                    has = False
-                    break
-            if has:
-                if curr_max > max_val:
-                    res = [player]
-                    max_val = curr_max
-                elif curr_max == max_val:
-                    res.append(player)
-        return res
-
-    def three_of_a_kind(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = 2
-        max_div = [2, 2]
-        for player in players:
-            curr = {}
-            for card in player.cards:
-                curr[card.value] = curr.get(card.value, 0) + 1
-            has = False
-            div = []
-
-            for key, value in curr.items():
-                if value == 3:
-                    has = True
-                else:
-                    div.append(key)
-
-            if has:
-                div.sort(reverse=True)
-                if player.cards[2].value > max_val:
-                    res = [player]
-                    max_val = player.cards[2].value
-                    max_div = div
-                elif player.cards[2].value == max_val:
-                    if div > max_div:
-                        res = [player]
-                        max_div = div
-                    elif div == max_div:
-                        res.append(player)
-        return res
-
-    def two_pair(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = [2, 2, 2]   # bigger pair, smaller pair, div
-        
-        for player in players:
-            curr = {}
-            val = []
-            for card in player.cards:
-                curr[card.value] = curr.get(card.value, 0) + 1
-            
-            one = 0
-            pair_c = 0
-            for key, value in curr.items():
-                if value == 2:
-                    pair_c += 1
-                    val.append(key)
-                else:
-                    one = key
-            
-            if pair_c == 2:
-                val.sort(reverse=True)
-                val.append(one)
-                if val > max_val:
-                    res = [player]
-                    max_val = val
-                elif val == max_val:
-                    res.append(player)
-        return res
-
-    def one_pair(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-
-        max_val = [2, 2, 2, 2]
-        for player in players:
-            curr = {}
-            val = []
-            for card in player.cards:
-                curr[card.value] = curr.get(card.value, 0) + 1
-            
-            has = False
-            pair = []
-            for key, value in curr.items():
-                if value == 2:
-                    has = True
-                    pair.append(key)
-                else:
-                    val.append(key)
-            
-            if has:
-                val.sort(reverse=True)
-                val = pair + val
-                if val > max_val:
-                    res = [player]
-                    max_val = val
-                elif val == max_val:
-                    res.append(player)
-        return res
-
-    def high_card(self, players: list[CardPlayer]) -> list[CardPlayer]:
-        res = []
-        max_val = [2, 2, 2, 2, 2]
-        for player in players:
-            val = []
-
-            for card in player.cards:
-                val.append(card.value)
-
-            val.sort(reverse=True)
-            if val > max_val:
-                res = [player]
-                max_val = val
-            elif val == max_val:
-                res.append(player)
-        return res
+        if is_straight and is_flush:
+            return (9, values) if values[0] == 14 else (8, values)  # Royal Flush / Straight Flush
+        if 4 in sorted_counts:
+            return (7, values)  # Four of a Kind
+        if sorted_counts == [3, 2]:
+            return (6, values)  # Full House
+        if is_flush:
+            return (5, values)  # Flush
+        if is_straight:
+            return (4, values)  # Straight
+        if 3 in sorted_counts:
+            return (3, values)  # Three of a Kind
+        if sorted_counts == [2, 2, 1]:
+            return (2, values)  # Two Pair
+        if 2 in sorted_counts:
+            return (1, values)  # One Pair
+        return (0, values)  # High Card
