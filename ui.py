@@ -9,6 +9,7 @@ from blackjack.cmd_handler_blackjack import BlackJackCmdHandler
 from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
+from poker.cmd_handler_poker import PokerCmdHandler
 from database import Database
 from abc import ABC
 
@@ -182,6 +183,8 @@ class GameUserInterface(UI, ABC):
                 await BaccaratCmdHandler.cmd_status(self.game, interaction, ["status"])
             case GameType.GUESSNUMBER:
                 await GuessNumberCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.POKER:
+                await PokerCmdHandler.cmd_status(self.game, interaction, ["status"])
             case _:
                 await interaction.response.send_message("Not implemented yet", ephemeral=True)
 
@@ -202,6 +205,8 @@ class GameUserInterface(UI, ABC):
                 await BlackJackCmdHandler.cmd_betlist(self.game, interaction, ["betlist"])
             case GameType.GUESSNUMBER:
                 await GuessNumberCmdHandler.command_betlist(self.game, interaction, ["betlist"])
+            case GameType.POKER:
+                await PokerCmdHandler.cmd_betlist(self.game, interaction, ["betlist"])
             case _:
                 await interaction.response.send_message("Not implemented yet", ephemeral=True)
 
