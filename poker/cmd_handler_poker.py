@@ -38,12 +38,14 @@ class PokerCmdHandler(CommandHandler):
                         msg_txt += f" on {game.round_bet}"
                     if game.players[coroutine_res].state == PokerPlayerState.ALL_IN_CALLED or game.players[coroutine_res].state == PokerPlayerState.ALL_IN_RAISED:
                         msg_txt += " as ALL IN"
-                    await message.edit(content=f"```\n   {msg_txt}   \n```", view=None)
+                    await message.edit(content=f"```\n   {msg_txt}   ```", view=None)
                 if not next(draw_coroutine):
                     break
                 await game.channel.send(f"```\n{game.show_game()}\n```")
                 game.round_restart()
-            await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
+            game.divide_pots()
+            game.evaluate_winners()
+            await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}```")
             game.game_restart()
             from ui import BetUI, JoinLeaveUI
             await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))

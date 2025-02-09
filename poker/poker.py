@@ -14,6 +14,13 @@ class PokerPlayer(CardPlayer):
         super().__init__(player_info)
         self.round_bet = 0
         self.game_bet = 0
+        self.eval_cards: list[Card] = []
+
+class PokerPot:
+    def __init__(self):
+        self.bank = 0
+        self.players: list[Player] = []
+        self.winners: list[Player] = []
 
 class PokerTable(CardPlayer):
 
@@ -32,7 +39,7 @@ class Poker(CardGame):
         self.blind = 20
         self.blind_index = 0
         self.round_bet = 0
-        self.bank = 0
+        self.pots: dict[int, PokerPot] = {}
     
     def game_start(self):
         self.get_blinds()
@@ -48,6 +55,32 @@ class Poker(CardGame):
     def play_round(self):
         pass
 
+    def divide_pots(self):
+        sorted_by_round_bets = sorted(self.players.values(), key=lambda player: player.game_bet)
+        for player in sorted_by_round_bets:
+            if player.game_bet not in self.pots.keys() and player.state != PokerPlayerState.FOLDED:
+                self.pots[player.game_bet] = PokerPot()
+        
+        for player in sorted_by_round_bets:
+            for contribution, pot in self.pots.items():
+                if player.game_bet >= contribution:
+                    pot.players.append(player)
+        
+        prev_contributions = 0
+        for contribution, pot in self.pots.items():
+            for player in sorted_by_round_bets:
+                bet_to_add = min(contribution - prev_contributions, player.game_bet)
+                pot.bank += bet_to_add
+                player.game_bet -= bet_to_add
+            prev_contributions = contribution
+
+
+    def get_bank_size(self):
+        bank = 0
+        for player in self.players.values():
+            bank += player.game_bet
+        return bank
+
     def round_restart(self):
         self.round_bet = 0
         for player in self.players.values():
@@ -56,7 +89,6 @@ class Poker(CardGame):
                 player.state = PokerPlayerState.WAITING
 
     def raise_bet(self, new_bet: int, player: discord.User | discord.Member):
-        self.bank += new_bet - self.players[player.id].round_bet
         self.players[player.id].game_bet += new_bet - self.players[player.id].round_bet
         self.players[player.id].bet.value -= new_bet - self.players[player.id].round_bet
         self.players[player.id].round_bet = new_bet
@@ -64,19 +96,20 @@ class Poker(CardGame):
 
 
     def game_restart(self):
-        self.bank = 0
         self.blind += 10
         self.blind_index = (self.blind_index + 1) % len(self.players)
         self.deck = self.get_new_deck()
         self.table.cards = []
+        self.pots = []
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
             player.cards = []
+            player.eval_cards = []
             player.game_bet = 0
 
     def show_game(self):
-        show = f"Bank: |{self.bank}|\n\n"
+        show = f"Bank: |{self.get_bank_size()}|\n\n"
         show += "Table:\n"
         show += self.table.show_cards()
         show += "\n"
@@ -113,7 +146,7 @@ class Poker(CardGame):
         return message + "The game will start rolling automatically after everyone is ready!"
     
     def get_banklist_msg(self):
-        message = f"There is now {self.bank} in the BANK on the table!\n"
+        message = f"There is now {self.get_bank_size()} in the BANK on the table!\n"
         message += f"There are now {len(self.players.values())} players in this game, showing their banks:\n" + 25 * '-' + '\n'
         for player in self.players.values():
             message += f"{player.player_info.display_name} ({PokerPlayerState(player.state).name}) - BANK: {player.bet.value}, ON THE TABLE: {player.round_bet}\n"
@@ -130,13 +163,57 @@ class Poker(CardGame):
             if card.value == 14:
                 card.value = 1
         return cards
+    
+    def evaluate_winners(self):
+        for pot in self.pots.values():
+            pot.winners = self.determine_winner(pot.players)
+
+            for winner in pot.winners:
+                winner.bet.value += pot.bank // len(pot.winners)
+    
+    def show_winners(self):
+        show = ""
+        if len(self.pots) == 1:
+            for pot in self.pots:
+                if len(pot.winners) == 1:
+                    show += f"WINNER is {pot.winners[0].player_info.name} winning bank of {pot.bank}\n"
+                else:
+                    show += "WINNERS are "
+                    for index, player in enumerate(pot.winners):
+                        if index != 0:
+                            show += ", "
+                        show += f"{player.player_info.name}"
+                    show += f" each winning bank of {pot.bank // len(pot.winners)}\n"
+            return show
+
+        for index, pot in enumerate(self.pots.values()):
+            show += f"Pot {index}:\n"
+            show += f"   Bank |{pot.bank}|\n"
+            show += "Players: "
+            for index, player in enumerate(pot.players):
+                if index != 0:
+                    show += ", "
+                show += f"{player.player_info.name}"
+            show +="\n\n"
+            if len(pot.winners) == 1:
+                show += f"WINNER is {pot.winners[0].player_info.name} winning bank of {pot.bank}"
+            else:
+                show += "WINNERS are "
+                for index, player in enumerate(pot.winners):
+                    if index != 0:
+                        show += ", "
+                    show += f"{player.player_info.name}"
+                show += f" each winning bank of {pot.bank // len(pot.winners)}"
+        return show
 
     def sort_poker_cards(self, cards: list[Card]) -> list[Card]:
         return sorted(cards, key=lambda card: card.value, reverse=True)
 
-    def determine_winner(self, players: list[CardPlayer]) -> list[CardPlayer]:     # use ranks and values to determine winner
+    def determine_winner(self, players: list[PokerPlayer]) -> list[PokerPlayer]:     # use ranks and values to determine winner
         for player in players:
-            player.cards = self.change_aces_value(player.cards)
+            if len(player.eval_cards) == 0:
+                player.eval_cards = player.cards + self.table.cards
+            player.eval_cards = self.change_aces_value(player.eval_cards)
 
         best_hands = {player: self.best_hand(player) for player in players}
         best_rank = best_hands[players[0]][0]
@@ -157,8 +234,8 @@ class Poker(CardGame):
             return best_players
         return self.resolve_even_rank(best_players, best_rank)
 
-    def best_hand(self, player: CardPlayer) -> tuple[int, list[int]]:
-        all_five_card_hands = combinations(player.cards, 5)
+    def best_hand(self, player: PokerPlayer) -> tuple[int, list[int]]:
+        all_five_card_hands = combinations(player.eval_cards, 5)
         return max(all_five_card_hands, key=self.get_hand_rank)
 
     def get_hand_rank(self, hand: list[Card]) -> tuple[int, list[int]]:
