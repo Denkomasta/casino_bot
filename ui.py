@@ -183,27 +183,24 @@ class GameUserInterface(UI, ABC):
     @discord.ui.button(label="STATUS", style=discord.ButtonStyle.gray, row=3)
     async def handle_betlist(self, interaction: discord.Interaction, button: discord.ui.Button):
         assert(isinstance(self.game, Game)) # Needed for highlighting
-        try:
-            if not self.game.check_valid_player(interaction.user):
-                await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
-                return
-            match self.game.type:
-                case GameType.COINFLIP:
-                    await CoinflipCmdHandler.command_status(self.game, interaction, ["status"])
-                case GameType.ROLLTHEDICE:
-                    await RollTheDiceCmdHandler.command_status(self.game, interaction, ["status"])
-                case GameType.BLACKJACK:
-                    await BlackJackCmdHandler.cmd_status(self.game, interaction, ["status"])
-                case GameType.BACCARAT:
-                    await BaccaratCmdHandler.cmd_status(self.game, interaction, ["status"])
-                case GameType.GUESSNUMBER:
-                    await GuessNumberCmdHandler.command_status(self.game, interaction, ["status"])
-                case GameType.POKER:
-                    await PokerCmdHandler.cmd_status(self.game, interaction, ["status"])
-                case _:
-                    await interaction.response.send_message("Not implemented yet", ephemeral=True)
-        except:
-            traceback.print_exc()
+        if not self.game.check_valid_player(interaction.user):
+            await interaction.response.send_message(f"{interaction.user.mention} You need to join the game first to place bets!", ephemeral=True, delete_after=10)
+            return
+        match self.game.type:
+            case GameType.COINFLIP:
+                await CoinflipCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.ROLLTHEDICE:
+                await RollTheDiceCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.BLACKJACK:
+                await BlackJackCmdHandler.cmd_status(self.game, interaction, ["status"])
+            case GameType.BACCARAT:
+                await BaccaratCmdHandler.cmd_status(self.game, interaction, ["status"])
+            case GameType.GUESSNUMBER:
+                await GuessNumberCmdHandler.command_status(self.game, interaction, ["status"])
+            case GameType.POKER:
+                await PokerCmdHandler.cmd_status(self.game, interaction, ["status"])
+            case _:
+                await interaction.response.send_message("Not implemented yet", ephemeral=True)
 
     @discord.ui.button(label="BET LIST", style=discord.ButtonStyle.gray, row=3)
     async def handle_bestlist(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -223,7 +220,7 @@ class GameUserInterface(UI, ABC):
             case GameType.GUESSNUMBER:
                 await GuessNumberCmdHandler.command_betlist(self.game, interaction, ["betlist"])
             case GameType.POKER:
-                await PokerCmdHandler.cmd_betlist(self.game, interaction, ["betlist"])
+                await PokerCmdHandler.cmd_bank(self.game, interaction, ["banklist"])
             case _:
                 await interaction.response.send_message("Not implemented yet", ephemeral=True)
 

@@ -95,7 +95,13 @@ class PokerCmdHandler(CommandHandler):
 
     @staticmethod
     async def cmd_status(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
-        message = game.get_status_msg()
+        message = game.get_banklist_msg()
+        await CommandHandler.send(f"```{message}```", source, ephemeral=True)
+
+    @staticmethod
+    async def cmd_bank(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
+        message = f"You have {game.players[source.user.id].bet.value} in your in-game bank. You can change it between each game!\n"
+        message += f"You have {game.players[source.user.id].round_bet} currently on the table!"
         await CommandHandler.send(f"```{message}```", source, ephemeral=True)
 
     # Only interaction
@@ -143,4 +149,5 @@ class PokerCmdHandler(CommandHandler):
         "fold": cmd_fold,
         "bet": CommandHandler.cmd_bet,
         "status": cmd_status,
+        "bank": cmd_bank
     }

@@ -16,14 +16,11 @@ class PokerBetUI(BetUI):
                 match item.label:
                     case "SET BET AMOUNT":
                         item.label = "CHOOSE IN-GAME BANK"
+                    case "STATUS":
+                        item.label = "PLAYERS AND BANKS"
                     case "BET LIST":
-                        item.label = "VIEW ALL BANKS"
-
-    @discord.ui.button(label="MY BANK", style=discord.ButtonStyle.gray, row=3)
-    async def handle_bank(self, interaction: discord.Interaction, button: discord.ui.Button):
-        message = f"You have {self.game.players[interaction.user.id].bet.value} in your in-game bank. You can change it between each game!\n"
-        message += f"You have {self.game.players[interaction.user.id].round_bet} currently on the table!"
-        await interaction.response.send_message(f"```{message}```", ephemeral=True)
+                        item.label = "MY BANK"
+        
 
 class Poker_ingame(UI):
     def __init__(self, game: Poker, id: int):

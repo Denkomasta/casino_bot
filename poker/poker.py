@@ -139,10 +139,13 @@ class Poker(CardGame):
         return (0, values)  # High Card
 
     def get_status_msg(self):
-        try:
-            message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
-            for player in self.players.values():
-                message += (player.player_info.display_name + " - " + PokerPlayerState(player.state).name + "\n")
-            return message + "The game will start rolling automatically after everyone is ready!"
-        except:
-            traceback.print_exc()
+        message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
+        for player in self.players.values():
+            message += (player.player_info.display_name + " - " + PokerPlayerState(player.state).name + "\n")
+        return message + "The game will start rolling automatically after everyone is ready!"
+    
+    def get_banklist_msg(self):
+        message = f"There are now {len(self.players.values())} players in this game, showing their banks:\n" + 25 * '-' + '\n'
+        for player in self.players.values():
+            message += f"{player.player_info.display_name} ({PokerPlayerState(player.state).name}) - BANK: {player.bet.value}, ON THE TABLE: {player.round_bet}\n"
+        return message
