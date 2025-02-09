@@ -85,12 +85,16 @@ class StartUI(UI):
         
     def __init__(self, game: Game):
         super().__init__(game)
+        self.is_clicked = False
         for item in self.children:
             if isinstance(item, discord.ui.Button) and item.label == "START":
                 item.label = f"START THE GAME OF {GameType(game.type).name}"
 
     @discord.ui.button(label="START", style=discord.ButtonStyle.blurple)
     async def handle_ready(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.is_clicked:
+            await interaction.response.send_message("Button was already clicked", ephemeral=True, delete_after=2)
+        self.is_clicked = True
         match self.game.type:
             case GameType.BACCARAT:
                 await BaccaratCmdHandler.cmd_start(self.game, interaction, ["start"])
@@ -108,6 +112,7 @@ class StartUI(UI):
             case GameType.POKER:
                 await self.game.channel.send("All players are ready! The game starts!")
                 try:
+                    await interaction.response.send_message("Game started succesfully", delete_after=0)
                     await PokerCmdHandler.cmd_start(self.game, interaction, ["start"])
                 except:
                     traceback.print_exc()

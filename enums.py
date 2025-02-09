@@ -37,9 +37,11 @@ class PokerPlayerState(IntEnum):
     FINISHED = 3
     WAITING = 4
     CHECKED = 5
-    FOLDED = 6
-    RAISED = 7
-    CALLED = 8
+    RAISED = 6
+    CALLED = 7
+    FOLDED = 8
+    ALL_IN_CALLED = 9
+    ALL_IN_RAISED = 10
 
 class CardSuits(IntEnum):
     UNSHOWABLE = -1

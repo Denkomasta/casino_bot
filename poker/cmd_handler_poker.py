@@ -20,11 +20,12 @@ class PokerCmdHandler(CommandHandler):
     @staticmethod
     async def cmd_start(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
         try:
-            coroutine = PokerCmdHandler.game_coroutine(game)
+            game_coroutine = PokerCmdHandler.game_coroutine(game)
+            draw_coroutine = PokerCmdHandler.draw_coroutine(game)
             game.game_start()
             for round in range(4):
                 while True:
-                    coroutine_res = next(coroutine)
+                    coroutine_res = next(game_coroutine)
                     if coroutine_res == -1:
                         break
                     from poker.ui_poker import Poker_ingame
@@ -32,16 +33,14 @@ class PokerCmdHandler(CommandHandler):
                     message = await game.channel.send(f"{game.players[coroutine_res].player_info.mention} has his turn:\n", view=view)
                     if (await view.wait()):
                         await PokerCmdHandler.cmd_default_action(game, source, ["whtvr"])
-                    msg_txt = f"Player {game.players[coroutine_res].player_info.mention} {PokerPlayerState(view.value).name}"
+                    msg_txt = f"Player {game.players[coroutine_res].player_info.name} {PokerPlayerState(view.value).name}"
                     if view.value == PokerPlayerState.RAISED:
                         msg_txt += f" on {game.round_bet}"
-                    await message.edit(content=msg_txt, view=None)
-                if (round == 3):
+                    if game.players[coroutine_res].state == PokerPlayerState.ALL_IN_CALLED or game.players[coroutine_res].state == PokerPlayerState.ALL_IN_RAISED:
+                        msg_txt += " as ALL IN"
+                    await message.edit(content=f"```\n   {msg_txt}   \n```", view=None)
+                if not next(draw_coroutine):
                     break
-                if (round == 0):
-                    game.draw_cards(3)
-                else:
-                    game.draw_cards(1)
                 await game.channel.send(f"```\n{game.show_game()}\n```")
                 game.round_restart()
             await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n```")
@@ -76,13 +75,23 @@ class PokerCmdHandler(CommandHandler):
             await CommandHandler.send("Enter a number", source, ephemeral=True)
             return
         player = game.players.get(CommandHandler.get_id(source))
+        if (bet_value <= game.round_bet or bet_value > player.bet.value):
+            await CommandHandler.send("Your input is not in the range, try again", source, ephemeral=True)
+            return
         player.state = PokerPlayerState.RAISED
+        if (bet_value == player.bet.value):
+            player.state = PokerPlayerState.ALL_IN_RAISED
         game.raise_bet(bet_value, player.player_info)
-        await CommandHandler.send(f"You have RAISED to {bet_value}", source, ephemeral=True)
+        await CommandHandler.send(f"You have RAISED to {bet_value}{('' if player.state != PokerPlayerState.ALL_IN_RAISED else ' as ALL IN')}", source, ephemeral=True)
 
     @staticmethod
     async def cmd_call(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
         player = game.players.get(CommandHandler.get_id(source))
+        if (game.round_bet >= player.bet.value):
+            player.state = PokerPlayerState.ALL_IN_CALLED
+            game.raise_bet(player.bet.value, player.player_info)
+            await CommandHandler.send(f"You went ALL IN for {player.round_bet}", source, ephemeral=True)
+            return
         player.state = PokerPlayerState.CALLED
         game.raise_bet(game.round_bet, player.player_info)
         await CommandHandler.send(f"You have CALLED to {game.round_bet}", source, ephemeral=True)
@@ -126,17 +135,24 @@ class PokerCmdHandler(CommandHandler):
             first = True
             while (first or index_player != last_player):
                 first = False
-                if list(game.players.values())[index_player].state == PokerPlayerState.FOLDED:
+                if game.get_player_by_index(index_player).state >= PokerPlayerState.FOLDED and game.get_player_by_index(index_player).state <= PokerPlayerState.ALL_IN_RAISED:
                     index_player = (index_player + 1) % len(game.players)
                     continue
-                yield list(game.players.values())[index_player].player_info.id
-                if list(game.players.values())[index_player].state == PokerPlayerState.RAISED:
+                yield game.get_player_by_index(index_player).player_info.id
+                if (game.get_player_by_index(index_player).state == PokerPlayerState.RAISED or game.get_player_by_index(index_player).state == PokerPlayerState.ALL_IN_RAISED):
                     last_player = index_player
                 index_player = (index_player + 1) % len(game.players)
             yield (-1)
 
-            
-
+    @staticmethod
+    def draw_coroutine(game: Poker):
+        game.draw_cards(3)
+        yield True
+        game.draw_cards(1)
+        yield True
+        game.draw_cards(1)
+        yield True
+        yield False
     
     command_dict: dict[str, Callable[[Poker, commands.Context | discord.Interaction, list[str]], Awaitable[None]]] = {
         "join": CommandHandler.cmd_join,

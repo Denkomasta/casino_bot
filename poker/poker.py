@@ -13,6 +13,7 @@ class PokerPlayer(CardPlayer):
     def __init__(self, player_info):
         super().__init__(player_info)
         self.round_bet = 0
+        self.game_bet = 0
 
 class PokerTable(CardPlayer):
 
@@ -51,11 +52,12 @@ class Poker(CardGame):
         self.round_bet = 0
         for player in self.players.values():
             player.round_bet = 0
-            if player.state != PokerPlayerState.FOLDED:
+            if player.state < PokerPlayerState.FOLDED: #state stays if FOLDER, ALL_IN_CALLED, ALL_IN_RAISED
                 player.state = PokerPlayerState.WAITING
 
     def raise_bet(self, new_bet: int, player: discord.User | discord.Member):
         self.bank += new_bet - self.players[player.id].round_bet
+        self.players[player.id].game_bet += new_bet - self.players[player.id].round_bet
         self.players[player.id].bet.value -= new_bet - self.players[player.id].round_bet
         self.players[player.id].round_bet = new_bet
         self.round_bet = new_bet
@@ -71,6 +73,7 @@ class Poker(CardGame):
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
             player.cards = []
+            player.game_bet = 0
 
     def show_game(self):
         show = f"Bank: |{self.bank}|\n\n"

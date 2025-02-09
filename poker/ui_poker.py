@@ -51,9 +51,14 @@ class Poker_ingame(UI):
             if interaction.user.id != self.on_turn_id:
                 await interaction.response.send_message(f"{interaction.user.mention} Please wait for your turn!", ephemeral=True, delete_after=5)
                 return
+            if self.game.players[interaction.user.id].bet.value <= self.game.round_bet:
+                await interaction.response.send_message(f"You don't have enough in your bank to RAISE")
+                return
             modal = RaiseModal(self.game, interaction.user.id)
             await interaction.response.send_modal(modal)
             await modal.wait()
+            if (self.game.players[interaction.user.id].state != PokerPlayerState.RAISED and self.game.players[interaction.user.id].state != PokerPlayerState.ALL_IN_RAISED):
+                return
             self.value = PokerPlayerState.RAISED
             self.stop()
         except:
@@ -80,7 +85,7 @@ class RaiseModal(discord.ui.Modal, title="Place Your Bet"):
         super().__init__()
         self.game = game
         self.author_id = author_id
-        self.hint_message = f"E.g. 100 (max {self.game.players[author_id].bet.value} in your bank)"
+        self.hint_message = f"e. g. 100 ({game.round_bet + 1} - {self.game.players[author_id].bet.value})"
         self.max_length = int(log10(max(1,self.game.players[author_id].bet.value))) + 1
 
         self.amount_input = discord.ui.TextInput(
