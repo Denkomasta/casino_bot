@@ -48,7 +48,8 @@ class PokerCmdHandler(CommandHandler):
             game.game_restart()
             from ui import BetUI, JoinLeaveUI
             await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))
-            await game.channel.send("Do you want to change your bank??", view=BetUI(game))
+            from poker.ui_poker import PokerBetUI
+            await game.channel.send("Do you want to change your bank??", view=PokerBetUI(game))
         except:
             traceback.print_exc()
 
@@ -94,7 +95,8 @@ class PokerCmdHandler(CommandHandler):
 
     @staticmethod
     async def cmd_status(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
-        pass
+        message = game.get_status_msg()
+        await CommandHandler.send(f"```{message}```", source, ephemeral=True)
 
     # Only interaction
     @staticmethod

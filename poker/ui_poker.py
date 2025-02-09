@@ -8,9 +8,22 @@ from poker.cmd_handler_poker import PokerCmdHandler
 from poker.poker import Poker
 from math import log10
 
-class PokerUI(BetUI):
-    def __init__(self, game: Game):
+class PokerBetUI(BetUI):
+    def __init__(self, game: Poker):
         super().__init__(game)
+        for item in self.children:
+            if isinstance(item, discord.ui.Button) and game.type == GameType.POKER:
+                match item.label:
+                    case "SET BET AMOUNT":
+                        item.label = "CHOOSE IN-GAME BANK"
+                    case "BET LIST":
+                        item.label = "VIEW ALL BANKS"
+
+    @discord.ui.button(label="MY BANK", style=discord.ButtonStyle.gray, row=3)
+    async def handle_bank(self, interaction: discord.Interaction, button: discord.ui.Button):
+        message = f"You have {self.game.players[interaction.user.id].bet.value} in your in-game bank. You can change it between each game!\n"
+        message += f"You have {self.game.players[interaction.user.id].round_bet} currently on the table!"
+        await interaction.response.send_message(f"```{message}```", ephemeral=True)
 
 class Poker_ingame(UI):
     def __init__(self, game: Poker, id: int):
@@ -71,7 +84,7 @@ class RaiseModal(discord.ui.Modal, title="Place Your Bet"):
         self.game = game
         self.author_id = author_id
         self.hint_message = f"E.g. 100 (max {self.game.players[author_id].bet.value} in your bank)"
-        self.max_length = int(log10(self.game.players[author_id].bet.value)) + 1
+        self.max_length = int(log10(max(1,self.game.players[author_id].bet.value))) + 1
 
         self.amount_input = discord.ui.TextInput(
             label="Enter an amount you want to raise the bet to:",

@@ -7,6 +7,7 @@ from database import Database
 from base_classes import CardGame, CardPlayer, Card, Player
 from itertools import combinations
 from collections import Counter
+import traceback
 
 class PokerPlayer(CardPlayer):
     def __init__(self, player_info):
@@ -38,6 +39,7 @@ class Poker(CardGame):
         for _ in range(2):
             for player in self.players.values():
                 player.cards.append(self.draw_card())
+                player.state = PokerPlayerState.WAITING
 
     def game_finish(self):
         pass
@@ -49,6 +51,8 @@ class Poker(CardGame):
         self.round_bet = 0
         for player in self.players.values():
             player.round_bet = 0
+            if player.state != PokerPlayerState.FOLDED:
+                player.state = PokerPlayerState.WAITING
 
     def raise_bet(self, new_bet: int, player: discord.User | discord.Member):
         self.bank += new_bet - self.players[player.id].round_bet
@@ -133,3 +137,12 @@ class Poker(CardGame):
         if 2 in sorted_counts:
             return (1, values)  # One Pair
         return (0, values)  # High Card
+
+    def get_status_msg(self):
+        try:
+            message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
+            for player in self.players.values():
+                message += (player.player_info.display_name + " - " + PokerPlayerState(player.state).name + "\n")
+            return message + "The game will start rolling automatically after everyone is ready!"
+        except:
+            traceback.print_exc()
