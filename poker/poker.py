@@ -145,7 +145,8 @@ class Poker(CardGame):
         return message + "The game will start rolling automatically after everyone is ready!"
     
     def get_banklist_msg(self):
-        message = f"There are now {len(self.players.values())} players in this game, showing their banks:\n" + 25 * '-' + '\n'
+        message = f"There is now {self.bank} in the BANK on the table!\n"
+        message += f"There are now {len(self.players.values())} players in this game, showing their banks:\n" + 25 * '-' + '\n'
         for player in self.players.values():
             message += f"{player.player_info.display_name} ({PokerPlayerState(player.state).name}) - BANK: {player.bet.value}, ON THE TABLE: {player.round_bet}\n"
         return message
