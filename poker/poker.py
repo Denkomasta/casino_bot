@@ -140,24 +140,21 @@ class Poker(CardGame):
         best_players = [players[0]]
 
         for player in players:
-            curr = best_hands[player][0]
+            curr, vals = best_hands[player]
             if curr > best_rank:
-                best_players = [player]
+                best_players = [(player, vals)]
                 best_rank = curr
             elif curr == best_rank:
-                best_players.append(player)
+                best_players.append((player, vals))
 
-        if len(best_players) == 1:
-            for player in players:
-                player.cards = self.revert_aces_value(player.cards)
-            return best_players
-        
-        res = self.resolve_even_rank(best_players, best_rank)
         for player in players:
             player.cards = self.revert_aces_value(player.cards)
-        return res
 
-    def best_hand(self, player: CardPlayer) -> tuple[int, list[int]]:   # TODO get best hand of player, not vals
+        if len(best_players) == 1:
+            return best_players
+        return self.resolve_even_rank(best_players, best_rank)
+
+    def best_hand(self, player: CardPlayer) -> tuple[int, list[int]]:
         all_five_card_hands = combinations(player.cards, 5)
         return max(all_five_card_hands, key=self.get_hand_rank)
 
