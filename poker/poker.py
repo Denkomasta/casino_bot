@@ -100,7 +100,7 @@ class Poker(CardGame):
         self.blind_index = (self.blind_index + 1) % len(self.players)
         self.deck = self.get_new_deck()
         self.table.cards = []
-        self.pots = []
+        self.pots = {}
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
@@ -174,7 +174,7 @@ class Poker(CardGame):
     def show_winners(self):
         show = ""
         if len(self.pots) == 1:
-            for pot in self.pots:
+            for pot in self.pots.values():
                 if len(pot.winners) == 1:
                     show += f"WINNER is {pot.winners[0].player_info.name} winning bank of {pot.bank}\n"
                 else:
@@ -216,27 +216,36 @@ class Poker(CardGame):
             player.eval_cards = self.change_aces_value(player.eval_cards)
 
         best_hands = {player: self.best_hand(player) for player in players}
-        best_rank = best_hands[players[0]][0]
-        best_players = [players[0]]
+        best_rank = best_hands[players[0]][0][0]
+        best_players = []
 
         for player in players:
-            curr, vals = best_hands[player]
-            if curr > best_rank:
-                best_players = [(player, vals)]
-                best_rank = curr
-            elif curr == best_rank:
-                best_players.append((player, vals))
+            for curr, vals in best_hands[player]:
+                if curr > best_rank:
+                    best_players = [(player, vals)]
+                    best_rank = curr
+                elif curr == best_rank:
+                    best_players.append((player, vals))
 
         for player in players:
-            player.cards = self.revert_aces_value(player.cards)
+            player.eval_cards = self.revert_aces_value(player.eval_cards)
 
         if len(best_players) == 1:
-            return best_players
+            return [best_players[0][0]]
         return self.resolve_even_rank(best_players, best_rank)
 
-    def best_hand(self, player: PokerPlayer) -> tuple[int, list[int]]:
+    def best_hand(self, player: PokerPlayer) -> list[tuple[int, list[int]]]:
         all_five_card_hands = combinations(player.eval_cards, 5)
-        return max(all_five_card_hands, key=self.get_hand_rank)
+        best_rank = 0
+        res = []
+        for hand in all_five_card_hands:
+            rank, values = self.get_hand_rank(list(hand))
+            if rank > best_rank:
+                best_rank = rank
+                res = [(rank, values)]
+            elif rank == best_rank:
+                res.append((rank, values))
+        return res
 
     def get_hand_rank(self, hand: list[Card]) -> tuple[int, list[int]]:
         values = sorted([card.value for card in hand], reverse=True)
@@ -279,7 +288,14 @@ class Poker(CardGame):
             1: self.one_pair,
             0: self.high_card
         }
-        return card_combinations[rank](players)
+        temp = card_combinations[rank](players)
+        seen = set()
+        res = []
+        for player in temp:
+            if player.player_info.id not in seen:
+                res.append(player)
+                seen.add(player.player_info.id)
+        return res
     
     # !!! player.cards needs to be sorted and change ace value from 1 to 14 !!!
     def royal_flush(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
