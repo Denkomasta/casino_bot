@@ -128,6 +128,20 @@ class Poker(CardGame):
 
     def get_player_by_index(self, index):
         return list(self.players.values())[(index) % len(self.players)]
+    
+    def is_instand_win(self):
+        finished = 0
+        for player in self.players.values():
+            if player.state == PokerPlayerState.FOLDED: #FOLDED/ALL_IN
+                finished += 1
+        return finished == len(self.players) - 1
+    
+    def is_ready_to_get_all_cards(self):
+        finished = 0
+        for player in self.players.values():
+            if player.state >= PokerPlayerState.FOLDED: #FOLDED/ALL_IN
+                finished += 1
+        return finished == len(self.players) - 1
 
     def draw_cards(self, number: int):
         self.draw_card()
@@ -136,8 +150,8 @@ class Poker(CardGame):
 
     def get_blinds(self):
         self.round_bet = self.blind
-        self.raise_bet(self.blind, self.get_player_by_index(self.blind_index).player_info)
-        self.raise_bet(self.blind // 2, self.get_player_by_index(self.blind_index + 1).player_info)
+        self.raise_bet(self.blind // 2, self.get_player_by_index(self.blind_index).player_info)
+        self.raise_bet(self.blind, self.get_player_by_index(self.blind_index + 1).player_info)
     
     def get_status_msg(self):
         message = f"There are now {len(self.players.values())} players in this game, listing:\n" + 25 * '-' + '\n'
@@ -187,7 +201,7 @@ class Poker(CardGame):
             return show
 
         for index, pot in enumerate(self.pots.values()):
-            show += f"Pot {index}:\n"
+            show += f"Pot {index + 1}:\n"
             show += f"   Bank |{pot.bank}|\n"
             show += "Players: "
             for index, player in enumerate(pot.players):
@@ -196,14 +210,14 @@ class Poker(CardGame):
                 show += f"{player.player_info.name}"
             show +="\n\n"
             if len(pot.winners) == 1:
-                show += f"WINNER is {pot.winners[0].player_info.name} winning bank of {pot.bank}"
+                show += f"WINNER is {pot.winners[0].player_info.name} winning bank of {pot.bank}\n\n"
             else:
                 show += "WINNERS are "
                 for index, player in enumerate(pot.winners):
                     if index != 0:
                         show += ", "
                     show += f"{player.player_info.name}"
-                show += f" each winning bank of {pot.bank // len(pot.winners)}"
+                show += f" each winning bank of {pot.bank // len(pot.winners)}\n\n"
         return show
 
     def sort_poker_cards(self, cards: list[Card]) -> list[Card]:

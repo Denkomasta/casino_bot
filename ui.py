@@ -112,6 +112,8 @@ class StartUI(UI):
             case GameType.POKER:
                 await self.game.channel.send("All players are ready! The game starts!")
                 try:
+                    if not await PokerCmdHandler.check_blinds(self.game):
+                        await interaction.response.send_message("These don't have enough for blinds", delete_after=1)
                     await interaction.response.send_message("Game started succesfully", delete_after=0)
                     await PokerCmdHandler.cmd_start(self.game, interaction, ["start"])
                 except:

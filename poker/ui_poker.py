@@ -31,6 +31,10 @@ class Poker_ingame(UI):
         for item in self.children:
             if isinstance(item, discord.ui.Button) and item.label == "CHECK":
                 item.label = f"CALL TO {game.round_bet}" if game.round_bet > game.players[id].round_bet else "CHECK"
+                if item.label == "CHECK":
+                    for item in self.children:
+                        if isinstance(item, discord.ui.Button) and item.label == "FOLD":
+                            item.disabled = True
 
     @discord.ui.button(label="CHECK", style=discord.ButtonStyle.blurple, row=0)
     async def handle_check(self, interaction: discord.Interaction, button: discord.ui.Button):

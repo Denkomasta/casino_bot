@@ -2,7 +2,7 @@ from enums import GameType, GameState, E, PlayerState, BaccaratBetType, Coinflip
 from typing import Callable, Awaitable
 from discord.ext import commands
 from base_classes import Game
-from poker.poker import Poker
+from poker.poker import Poker, PokerPot
 import traceback
 from cmd_handler import CommandHandler
 import discord
@@ -20,6 +20,8 @@ class PokerCmdHandler(CommandHandler):
     @staticmethod
     async def cmd_start(game: Poker, source: commands.Context | discord.Interaction, args: list[str]) -> None:
         try:
+            if not await PokerCmdHandler.check_blinds(game):
+                return
             game_coroutine = PokerCmdHandler.game_coroutine(game)
             draw_coroutine = PokerCmdHandler.draw_coroutine(game)
             game.game_start()
@@ -39,18 +41,19 @@ class PokerCmdHandler(CommandHandler):
                     if game.players[coroutine_res].state == PokerPlayerState.ALL_IN_CALLED or game.players[coroutine_res].state == PokerPlayerState.ALL_IN_RAISED:
                         msg_txt += " as ALL IN"
                     await message.edit(content=f"```\n   {msg_txt}   ```", view=None)
+                if game.is_instand_win():
+                    await PokerCmdHandler.poker_finish(game)
+                    return
+                if game.is_ready_to_get_all_cards():
+                    while next(draw_coroutine):
+                        continue
+                    await PokerCmdHandler.poker_finish(game)
+                    return
                 if not next(draw_coroutine):
                     break
                 await game.channel.send(f"```\n{game.show_game()}\n```")
                 game.round_restart()
-            game.divide_pots()
-            game.evaluate_winners()
-            await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}```")
-            game.game_restart()
-            from ui import BetUI, JoinLeaveUI
-            await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))
-            from poker.ui_poker import PokerBetUI
-            await game.channel.send("Do you want to change your bank??", view=PokerBetUI(game))
+            await PokerCmdHandler.poker_finish(game)
         except:
             traceback.print_exc()
 
@@ -128,6 +131,41 @@ class PokerCmdHandler(CommandHandler):
         else:
             show += "Your cards were:\n"
         await CommandHandler.send(f"```{show}{player.show_cards()}```", source, ephemeral=True)
+
+    @staticmethod
+    async def poker_finish(game: Poker) -> None:
+        game.divide_pots()
+        if not game.is_instand_win():
+            game.evaluate_winners()
+        else:
+            list(game.pots.values())[0].players[0].bet.value += list(game.pots.values())[0].bank
+            list(game.pots.values())[0].winners.append(list(game.pots.values())[0].players[0])
+            list(game.pots.values())[0].players[0].state = PokerPlayerState.FOLDED
+        await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}```")
+        game.game_restart()
+        from ui import BetUI, JoinLeaveUI
+        await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))
+        from poker.ui_poker import PokerBetUI
+        await game.channel.send("Do you want to change your bank??", view=PokerBetUI(game))
+
+    @staticmethod
+    async def check_blinds(game: Poker) -> bool:
+        rv = True
+        small_blind_player = game.get_player_by_index(game.blind_index)
+        big_blind_player = game.get_player_by_index(game.blind_index + 1)
+
+        if small_blind_player.bet.value < game.blind // 2:
+            rv = False
+            small_blind_player.state = PokerPlayerState.NOT_READY
+            await game.channel.send(f"Player {small_blind_player.player_info.mention} has less in a bank than is a small blind ({game.blind // 2}), increase your bank please")
+        if big_blind_player.bet.value < game.blind:
+            rv = False
+            big_blind_player.state = PokerPlayerState.NOT_READY
+            await game.channel.send(f"Player {big_blind_player.player_info.mention} has less in a bank than is a big blind ({game.blind}), increase your bank please")
+        return rv
+
+
+
 
     @staticmethod
     def game_coroutine(game: Poker):
