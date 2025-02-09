@@ -63,7 +63,7 @@ class Poker(CardGame):
         
         for player in sorted_by_round_bets:
             for contribution, pot in self.pots.items():
-                if player.game_bet >= contribution:
+                if player.game_bet >= contribution and player.state != PokerPlayerState.FOLDED:
                     pot.players.append(player)
         
         prev_contributions = 0
@@ -132,9 +132,21 @@ class Poker(CardGame):
     def is_instand_win(self):
         finished = 0
         for player in self.players.values():
-            if player.state == PokerPlayerState.FOLDED: #FOLDED/ALL_IN
+            if player.state == PokerPlayerState.FOLDED:
                 finished += 1
         return finished == len(self.players) - 1
+    
+    def insta_win(self):
+        for player in self.players.values():
+            if player.state != PokerPlayerState.FOLDED:
+                player.bet.value += self.get_bank_size()
+                pot = PokerPot()
+                pot.winners.append(player)
+                pot.bank = self.get_bank_size()
+                pot.players.append(player)
+                self.pots[self.get_bank_size()] = pot
+                player.state = PokerPlayerState.FOLDED
+                return
     
     def is_ready_to_get_all_cards(self):
         finished = 0

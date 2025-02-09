@@ -134,13 +134,11 @@ class PokerCmdHandler(CommandHandler):
 
     @staticmethod
     async def poker_finish(game: Poker) -> None:
-        game.divide_pots()
         if not game.is_instand_win():
+            game.divide_pots()
             game.evaluate_winners()
         else:
-            list(game.pots.values())[0].players[0].bet.value += list(game.pots.values())[0].bank
-            list(game.pots.values())[0].winners.append(list(game.pots.values())[0].players[0])
-            list(game.pots.values())[0].players[0].state = PokerPlayerState.FOLDED
+            game.insta_win()
         await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}```")
         game.game_restart()
         from ui import BetUI, JoinLeaveUI
