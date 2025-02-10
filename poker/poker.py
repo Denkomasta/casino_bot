@@ -7,6 +7,7 @@ from database import Database
 from base_classes import CardGame, CardPlayer, Card, Player
 from itertools import combinations
 from collections import Counter
+from ascii_obj import Ascii
 import traceback
 
 class PokerPlayer(CardPlayer):
@@ -110,7 +111,10 @@ class Poker(CardGame):
 
     def show_game(self):
         show = f"Bank: |{self.get_bank_size()}|\n\n"
-        show += "Table:\n"
+        show += "Table: "
+        for card in self.table.cards:
+            show += Ascii.get_value_symbol(card.value) + Ascii.get_symbol(card.suit) + " "
+        show += "\n"
         show += self.table.show_cards()
         show += "\n"
         

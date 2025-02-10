@@ -388,6 +388,29 @@ class Ascii:
         ],
     }
 
+    suit_symbols: dict[CardSuits, str] = {
+        CardSuits.UNSHOWABLE: "?",
+        CardSuits.HEARTS: "♥",
+        CardSuits.CLUBS: "♣",
+        CardSuits.SPADES: "♠",
+        CardSuits.DIAMONDS: "♦"
+    }
+
+    @staticmethod
+    def get_symbol(suit: CardSuits) -> str:
+        return Ascii.suit_symbols[suit]
+
+    value_symbols: dict[int, str] = {
+        1: "A", 11: "J", 12: "Q", 13: "K"
+    }
+
+    @staticmethod
+    def get_value_symbol(value: int) -> str:
+        symbol = Ascii.value_symbols.get(value)
+        if symbol is None:
+            return str(value)
+        return symbol
+
     @staticmethod
     def get_card(suit: CardSuits, value: int, showable: bool):
         if (not showable):
