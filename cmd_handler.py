@@ -7,6 +7,7 @@ from baccarat.baccarat import Baccarat
 from rng_games.rng_games import RNGGame, RNGBet, Coinflip, RollTheDice, GuessTheNumber
 from poker.poker import Poker
 from abc import ABC, abstractmethod
+import traceback
 from database import Database
 
 import discord
@@ -18,9 +19,9 @@ class CommandHandler:
         pass
     
     @staticmethod
-    async def send(message: str, source: commands.Context | discord.Interaction, ephemeral=False):
+    async def send(message: str, source: commands.Context | discord.Interaction, ephemeral=False, delete_after=None):
         if (isinstance(source, discord.Interaction)):
-            await source.response.send_message(message, ephemeral=ephemeral)
+            await source.response.send_message(message, ephemeral=ephemeral, delete_after=delete_after)
         else:
             await source.send(message)
 
@@ -46,24 +47,40 @@ class CommandHandler:
             return source.author
     
     @staticmethod
+    async def join(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+        try:
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
+            if len(options) == 0:
+                from ui import GeneralCreateUI
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
+                await source.channel.send("There is no existing game in the channel currently", view=GeneralCreateUI(games, data, options))
+                return
+            from ui import GeneralJoinUI
+            await source.channel.send(view=GeneralJoinUI(games, options))
+        except:
+            traceback.print_exc()
+
+    @staticmethod
     async def play(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
-        options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
-        if len(options) == 0:
-            from ui import CreateUI
-            await source.channel.send("There is no existing game in the channel currently", view=CreateUI(games, data, channel_id=CommandHandler.get_id(source)))
-            return
-        from ui import PlayUI
-        await source.channel.send(view=PlayUI(games, options=options))
+        try:
+            from ui import GeneralPlayUI
+            await source.channel.send(view=GeneralPlayUI(games, data))
+        except:
+            traceback.print_exc()
 
     @staticmethod
     async def create(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
-        options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
-        if len(options) == 0:
-            from ui import PlayUI
-            await source.channel.send("All types of games already exists in this channel", view=PlayUI(games, channel_id=CommandHandler.get_id(source)))
-            return
-        from ui import CreateUI
-        await source.channel.send(view=CreateUI(games, data, options=options))
+        try:
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
+            if len(options) == 0:
+                from ui import GeneralJoinUI
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
+                await source.channel.send("All types of games already exists in this channel", view=GeneralJoinUI(games, options))
+                return
+            from ui import GeneralCreateUI
+            await source.channel.send(view=GeneralCreateUI(games, data, options=options))
+        except:
+            traceback.print_exc()
 
     @staticmethod
     async def cmd_create(source: commands.Context | discord.Interaction, games: dict[(int, int), Game], data: Database, type: GameType):
@@ -88,9 +105,18 @@ class CommandHandler:
                 await CommandHandler.send("Not implemented yet", source)
                 return
         games[(source.channel.id, type)] = game
-        await CommandHandler.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'', source)
+        await CommandHandler.send(f'Game of {GameType(type).name} was created', source)
         from ui import JoinUI
         await source.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
+
+    @staticmethod
+    async def cmd_exit(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database, type: GameType):
+        if ((source.channel.id, type) not in games.keys()):
+            await CommandHandler.send(f'Game of {GameType(type).name} does not exist', source, ephemeral=True)
+            return
+        games.pop((source.channel.id, GameType.BLACKJACK))
+        await source.channel.send(f'Game of {GameType(type).name} was exited')
+        return
 
 
     @staticmethod
@@ -135,6 +161,9 @@ class CommandHandler:
              await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is not in the game!", source, ephemeral=True)
              return
         await CommandHandler.send(f"Player {CommandHandler.get_name(source)} left the game!", source, ephemeral=True)
+        if (len(game.players) == 0):
+            #TODO exit game
+            pass
 
 
     @staticmethod

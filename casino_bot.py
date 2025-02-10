@@ -13,7 +13,7 @@ from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from base_classes import Game
 from cmd_handler import CommandHandler
 from enums import GameType
-from ui import JoinUI, PlayUI, CreateUI
+from ui import JoinUI
 from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber, Roulette
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 from time import time
@@ -71,6 +71,13 @@ async def create(ctx: commands.Context):
     global Games
     global Data
     await CommandHandler.create(ctx, Games, Data)
+
+# command for joining
+@bot.command(name='join', help='Choose game to join')
+async def join(ctx: commands.Context):
+    global Games
+    global Data
+    await CommandHandler.join(ctx, Games, Data)
 
 # command for daily drop
 @bot.command(name='drop', help="Get your daily drop of money!")

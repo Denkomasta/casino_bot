@@ -97,8 +97,9 @@ class Poker(CardGame):
 
 
     def game_restart(self):
-        self.blind += 10
         self.blind_index = (self.blind_index + 1) % len(self.players)
+        if self.blind_index == 0:
+            self.blind += 10
         self.deck = self.get_new_deck()
         self.table.cards = []
         self.pots = {}
