@@ -83,6 +83,13 @@ class Poker_ingame(UI):
             await PokerCmdHandler.cmd_show_cards(self.game, interaction, ["fold"])
         except:
             traceback.print_exc()
+    
+    @discord.ui.button(label="MY_BANK", style=discord.ButtonStyle.grey, row=0)
+    async def handle_bank(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await PokerCmdHandler.cmd_bank(self.game, interaction, ["bank"])
+        except:
+            traceback.print_exc()
 
 class RaiseModal(discord.ui.Modal, title="Place Your Bet"):
     def __init__(self, game: Poker, author_id: int):
