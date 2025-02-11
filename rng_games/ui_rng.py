@@ -171,6 +171,13 @@ class GuessNumberUserInterface(GameUserInterface):
         except Exception as e:
             traceback.print_exc()
 
+    @discord.ui.button(label="HINT", style=discord.ButtonStyle.gray, row=2)
+    async def handle_hint(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            await GuessNumberCmdHandler.command_hint(self.game, interaction, ["hint"])
+        except Exception as e:
+            traceback.print_exc()
+
 
 class GTNBetModal(discord.ui.Modal, title="Place your guess"):
     def __init__(self, game: GuessTheNumber):

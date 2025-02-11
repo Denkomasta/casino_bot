@@ -328,17 +328,6 @@ class GuessNumberCmdHandler(RNGCmdHandler):
         for player in game.players.values():
             player.state = False
         
-        for number, bets in game.bets.items():
-            for bet in bets:    # Not ideal complexity
-                try:
-                    if bet.player.player_info.id == CommandHandler.get_id(source):
-                        if number > winning_number:
-                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name}, your number ({number}) was too **high**!", source, ephemeral=True)
-                        else:
-                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name} your number ({number}) was too **low**!", source, ephemeral=True)
-                        break
-                except Exception as e:
-                    print(e)
         await game.channel.send(f"Guess again, the round {game.curr_round} is waiting for your luck!", view=GuessNumberUserInterface(game))
             
     # TODO only one guess
@@ -372,6 +361,25 @@ class GuessNumberCmdHandler(RNGCmdHandler):
             await RNGCmdHandler.commands_dict[command](game, ctx, argv)
             return
         await GuessNumberCmdHandler.commands_dict[command](game, ctx, argv)
+    
+    @staticmethod
+    async def command_hint(game: GuessTheNumber, source: discord.Integration, argv: list[str]):
+        winning_number = game.last_roll
+        if winning_number is None:
+            await CommandHandler.send(f"The winning number has not been rolled yet, play a round!", source, ephemeral=True)
+            return
+
+        for number, bets in game.bets.items():
+            for bet in bets:    # Not ideal complexity
+                try:
+                    if bet.player.player_info.id == CommandHandler.get_id(source):
+                        if number > winning_number:
+                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name}, your number ({number}) was too **high**!", source, ephemeral=True)
+                        else:
+                            await CommandHandler.send(f"{CommandHandler.get_info(source).display_name} your number ({number}) was too **low**!", source, ephemeral=True)
+                        return
+                except Exception as e:
+                    print(e)
     
     commands_dict: dict[str, Callable[[commands.Context, list[str]], Awaitable[None]]] = {
         "guess": command_guess,

@@ -188,7 +188,7 @@ class GuessTheNumber(RNGGame):
     rounds: int
     curr_round: int
     def __init__(self, data: Database, channel: discord.TextChannel):
-        self.rounds = 4
+        self.rounds = 5
         self.curr_round = 1
         super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER, channel)
     
