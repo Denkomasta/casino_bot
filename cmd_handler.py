@@ -101,11 +101,19 @@ class CommandHandler:
                 game = GuessTheNumber(data, source.channel)
             case GameType.POKER:
                 game = Poker(data, source.channel)
+                from poker.ui_poker import PokerSettingsUI
+                try:
+                    view = PokerSettingsUI(game)
+                    await source.response.send_message("You can now change your game's settings and click on \"ALL SET\"", view=view, ephemeral=True)
+                    await view.wait()
+                except:
+                    traceback.print_exc()
             case _:
                 await CommandHandler.send("Not implemented yet", source)
                 return
         games[(source.channel.id, type)] = game
-        await CommandHandler.send(f'Game of {GameType(type).name} was created', source)
+        if game.type != GameType.POKER:
+            await CommandHandler.send(f'Game of {GameType(type).name} was created', source)
         from ui import JoinUI
         await source.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
 
@@ -125,9 +133,13 @@ class CommandHandler:
         if (game.state == GameState.RUNNING):
             await CommandHandler.send(f"Game is running, wait for the end", source)
             return
-        if (game.add_player(CommandHandler.get_info(source)) == E.INV_STATE):
+        status = game.add_player(CommandHandler.get_info(source))
+        if (status == E.INV_STATE):
              await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True)
              return
+        if status == E.BLOCKED:
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now joining disabled!", source, ephemeral=True)
+            return
         await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
         if len(args) > 1:
             match game.type:
@@ -149,6 +161,9 @@ class CommandHandler:
             await CommandHandler.send(f"Argument [bet] has to be number, try again", source, ephemeral=True)
             return
         game.change_bet(CommandHandler.get_info(source), bet)
+        if game.type == GameType.POKER and (not game.banks_changeable and not game.first_round):
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now betting disabled!")
+            return
         await CommandHandler.send(f"{CommandHandler.get_name(source)}'s bet changed to {bet}", source, ephemeral=True)
 
     @staticmethod

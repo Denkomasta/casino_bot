@@ -8,6 +8,7 @@ class E(IntEnum):
     INV_PLAYER = -4
     INV_BET = -5
     DUPLICITE_BET = -6
+    BLOCKED = -7
 
 class GameType(IntEnum):
     BLACKJACK = 0

@@ -27,7 +27,14 @@ class JoinUI(UI):
             self.type = type
             for item in self.children:
                 if isinstance(item, discord.ui.Button) and item.label == "JOIN":
-                    item.label = f"JOIN A GAME OF {GameType(type).name}"
+                    if game.type == GameType.POKER:
+                        from poker.poker import Poker
+                        assert(isinstance(game, Poker))
+                        item.label = f"JOIN A GAME OF {GameType(type).name}" + ("" if game.preset_bank is None else f" (BANK {game.preset_bank})")
+                        if not game.joinable and not game.first_round:
+                            item.disabled = True
+                    else:
+                        item.label = f"JOIN A GAME OF {GameType(type).name}"
 
     @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple)
     async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):

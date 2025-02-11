@@ -90,8 +90,14 @@ class Game(ABC):
                 from baccarat.baccarat import BaccaratPlayer
                 self.players[player_info.id] = BaccaratPlayer(player_info)
             case GameType.POKER:
+                from poker.poker import Poker
+                assert(isinstance(self, Poker))
+                if not self.first_round and not self.joinable:
+                    return E.BLOCKED
                 from poker.poker import PokerPlayer
                 self.players[player_info.id] = PokerPlayer(player_info)
+                if self.preset_bank is not None:
+                    self.players[player_info.id].bet.value = self.preset_bank
         return E.SUCCESS
     
     def remove_player(self, player_info: discord.User | discord.Member) -> E:

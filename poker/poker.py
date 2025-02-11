@@ -39,8 +39,13 @@ class Poker(CardGame):
         self.table: PokerTable = PokerTable()
         self.blind = 20
         self.blind_index = 0
+        self.blind_increase = 10
         self.round_bet = 0
         self.pots: dict[int, PokerPot] = {}
+        self.joinable = True
+        self.banks_changeable = True
+        self.preset_bank: int | None = None
+        self.first_round = True
     
     def game_start(self):
         self.get_blinds()
@@ -99,10 +104,11 @@ class Poker(CardGame):
     def game_restart(self):
         self.blind_index = (self.blind_index + 1) % len(self.players)
         if self.blind_index == 0:
-            self.blind += 10
+            self.blind += self.blind_increase
         self.deck = self.get_new_deck()
         self.table.cards = []
         self.pots = {}
+        self.first_round = False
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
