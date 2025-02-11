@@ -204,20 +204,20 @@ class PokerSettingsModal(discord.ui.Modal, title="Change your Poker experience!"
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            try:
-                start_blind = int(self.blind_input.value)
-                increase = int(self.increase_input.value)
-                if self.preset_bank_input.value != "":
-                    preset_bank = int(self.preset_bank_input.value)
-                else:
-                    preset_bank = None
-            except ValueError:
-                await interaction.response.send_message(f"{interaction.user.mention} All inputs must be numbers only!", ephemeral=True, delete_after=5)
-                return
-            assert(isinstance(self.game, Poker)) # Needed for highlighting
-            self.game.blind = start_blind
-            self.game.blind_increase = increase
-            self.game.preset_bank = preset_bank if preset_bank is not None else None
-            await interaction.response.send_message(f"You set the starting blind to {self.game.blind}, the blind inrease to {self.game.blind_increase} and the mandatory bank to {self.game.preset_bank}!", ephemeral=True, delete_after=5)
-        except:
-            traceback.print_exc()
+            start_blind = int(self.blind_input.value)
+            increase = int(self.increase_input.value)
+            if self.preset_bank_input.value != "":
+                preset_bank = int(self.preset_bank_input.value)
+            else:
+                preset_bank = None
+        except ValueError:
+            await interaction.response.send_message(f"{interaction.user.mention} All inputs must be numbers only!", ephemeral=True, delete_after=5)
+            return
+        assert(isinstance(self.game, Poker)) # Needed for highlighting
+        if start_blind >= preset_bank:
+            await interaction.response.send_message(f"{interaction.user.mention} Mandatory bank must be HIGHER than starting blind!", ephemeral=True, delete_after=5)
+            return
+        self.game.blind = start_blind
+        self.game.blind_increase = increase
+        self.game.preset_bank = preset_bank if preset_bank is not None else None
+        await interaction.response.send_message(f"You set the starting blind to {self.game.blind}, the blind inrease to {self.game.blind_increase} and the mandatory bank to {self.game.preset_bank}!", ephemeral=True, delete_after=5)
