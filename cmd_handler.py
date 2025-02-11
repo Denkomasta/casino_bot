@@ -19,11 +19,13 @@ class CommandHandler:
         pass
     
     @staticmethod
-    async def send(message: str, source: commands.Context | discord.Interaction, ephemeral=False, delete_after=None):
+    async def send(message: str, source: commands.Context | discord.Interaction, ephemeral=False, delete_after=None, view=None):
+        if view is None:
+            view=discord.ui.View()
         if (isinstance(source, discord.Interaction)):
-            await source.response.send_message(message, ephemeral=ephemeral, delete_after=delete_after)
+            await source.response.send_message(message, ephemeral=ephemeral, delete_after=delete_after, view=view)
         else:
-            await source.send(message)
+            await source.send(message, view=view)
 
     @staticmethod
     def get_id(source: commands.Context | discord.Interaction):
@@ -84,38 +86,27 @@ class CommandHandler:
 
     @staticmethod
     async def cmd_create(source: commands.Context | discord.Interaction, games: dict[(int, int), Game], data: Database, type: GameType):
-        if ((CommandHandler.get_id(source), type) in games.keys()):
-            await CommandHandler.send(f'Game already exists in your channel, use \'exit\' first', source)
-            return
-        game: Game
-        match type:
-            case GameType.BACCARAT:
-                game = Baccarat(data, source.channel)
-            case GameType.BLACKJACK:
-                game = BlackJack(data, source.channel)
-            case GameType.COINFLIP:
-                game = Coinflip(data, source.channel)
-            case GameType.ROLLTHEDICE:
-                game = RollTheDice(data, source.channel)
-            case GameType.GUESSNUMBER:
-                game = GuessTheNumber(data, source.channel)
-            case GameType.POKER:
-                game = Poker(data, source.channel)
-                from poker.ui_poker import PokerSettingsUI
-                try:
-                    view = PokerSettingsUI(game)
-                    await source.response.send_message("You can now change your game's settings and click on \"ALL SET\"", view=view, ephemeral=True)
-                    await view.wait()
-                except:
-                    traceback.print_exc()
-            case _:
-                await CommandHandler.send("Not implemented yet", source)
+        try:
+            if ((source.channel.id, type) in games.keys()):
+                await CommandHandler.send(f'Game of {GameType(type).name} already exists in your channel', source)
                 return
-        games[(source.channel.id, type)] = game
-        if game.type != GameType.POKER:
-            await CommandHandler.send(f'Game of {GameType(type).name} was created', source)
-        from ui import JoinUI
-        await source.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
+            
+            if type not in CommandHandler.create_dict.keys():
+                await CommandHandler.send(f"Game of {GameType(type).name} not implemented yet", source, ephemeral=True)
+                return
+            game: Game = CommandHandler.create_dict[type](data, source.channel)
+           
+            games[(source.channel.id, type)] = game
+            if game.type == GameType.POKER:
+                from poker.ui_poker import PokerSettingsUI
+                view = PokerSettingsUI(game)
+                await CommandHandler.send("You can now change your game's settings and click on \"ALL SET\"", source, view=view, ephemeral=True)
+                await view.wait()
+            await game.channel.send(f'Game of {GameType(type).name} was created')
+            from ui import JoinUI
+            await game.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
+        except:
+            traceback.print_exc()
 
     @staticmethod
     async def cmd_exit(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database, type: GameType):
@@ -130,24 +121,51 @@ class CommandHandler:
     @staticmethod
     async def cmd_join(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
         """Handles the 'join' command."""
-        if (game.state == GameState.RUNNING):
-            await CommandHandler.send(f"Game is running, wait for the end", source)
-            return
-        status = game.add_player(CommandHandler.get_info(source))
-        if (status == E.INV_STATE):
-             await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True)
-             return
-        if status == E.BLOCKED:
-            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now joining disabled!", source, ephemeral=True)
-            return
-        await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
-        if len(args) > 1:
+        try:
+            if (game.state == GameState.RUNNING):
+                await CommandHandler.send(f"Game is running, wait for the end", source)
+                return
+            from ui import GameUserInterface
+            bet_ui: GameUserInterface
             match game.type:
                 case GameType.BACCARAT:
-                    from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
-                    await BaccaratCmdHandler.cmd_bet(game, source, args)
-                case GameType.BLACKJACK:
-                    await CommandHandler.cmd_bet(game, source, args)
+                    from baccarat.ui_baccarat import BaccaratBetUI
+                    bet_ui = BaccaratBetUI(game)
+                case GameType.COINFLIP:
+                    from rng_games.ui_rng import CoinflipUserInterface
+                    bet_ui = CoinflipUserInterface(game)
+                case GameType.ROLLTHEDICE:
+                    from rng_games.ui_rng import RollTheDiceUserInterface
+                    bet_ui = RollTheDiceUserInterface(game)
+                case GameType.GUESSNUMBER:
+                    from rng_games.ui_rng import GuessNumberUserInterface
+                    bet_ui = GuessNumberUserInterface(game)
+                case GameType.POKER:
+                    from poker.ui_poker import PokerBetUI
+                    bet_ui = PokerBetUI(game)
+                case _:
+                    from ui import BetUI
+                    bet_ui = BetUI(game)
+
+            status = game.add_player(CommandHandler.get_info(source))
+            if (status == E.INV_STATE):
+                await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True, view=bet_ui)
+                return
+            if status == E.BLOCKED:
+                await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now joining disabled!", source, ephemeral=True)
+                return
+            await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
+            await CommandHandler.send("", source, ephemeral=True, view=bet_ui)
+            
+            if len(args) > 1:
+                match game.type:
+                    case GameType.BACCARAT:
+                        from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
+                        await BaccaratCmdHandler.cmd_bet(game, source, args)
+                    case GameType.BLACKJACK:
+                        await CommandHandler.cmd_bet(game, source, args)
+        except:
+            traceback.print_exc()
 
     @staticmethod
     async def cmd_bet(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
@@ -215,3 +233,26 @@ class CommandHandler:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{GameType(game.type).name.lower()} join to participate", source, ephemeral=True)
             return
         await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} needs more time to think and is now not ready", source)
+
+
+    create_dict = {
+        GameType.BACCARAT: Baccarat,
+        GameType.BLACKJACK: BlackJack,
+        GameType.COINFLIP: Coinflip,
+        GameType.GUESSNUMBER: GuessTheNumber,
+        GameType.POKER: Poker,
+        GameType.ROLLTHEDICE: RollTheDice,
+    }
+
+    """
+    from baccarat.ui_baccarat import BaccaratBetUI
+    from rng_games.ui_rng import CoinflipUserInterface, RollTheDiceUserInterface, GuessNumberUserInterface
+    from poker.ui_poker import PokerBetUI
+    betui_dict = {
+        GameType.BACCARAT: BaccaratBetUI,
+        GameType.COINFLIP: CoinflipUserInterface,
+        GameType.GUESSNUMBER: GuessNumberUserInterface,
+        GameType.POKER: PokerBetUI,
+        GameType.ROLLTHEDICE: RollTheDiceUserInterface,
+    }
+    """

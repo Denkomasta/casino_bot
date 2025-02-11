@@ -39,30 +39,8 @@ class JoinUI(UI):
     @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple)
     async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            bet_ui: GameUserInterface
-            match self.type:
-                case GameType.BACCARAT:
-                    from baccarat.ui_baccarat import BaccaratBetUI
-                    bet_ui = BaccaratBetUI(self.game)
-                case GameType.COINFLIP:
-                    from rng_games.ui_rng import CoinflipUserInterface
-                    bet_ui = CoinflipUserInterface(self.game)
-                case GameType.ROLLTHEDICE:
-                    from rng_games.ui_rng import RollTheDiceUserInterface
-                    bet_ui = RollTheDiceUserInterface(self.game)
-                case GameType.GUESSNUMBER:
-                    from rng_games.ui_rng import GuessNumberUserInterface
-                    bet_ui = GuessNumberUserInterface(self.game)
-                case GameType.POKER:
-                    from poker.ui_poker import PokerBetUI
-                    bet_ui = PokerBetUI(self.game)
-                case _:
-                    bet_ui = BetUI(self.game)
-            if (interaction.user.id in self.game.players.keys()):
-               await interaction.response.send_message("You are already in the game", view=bet_ui, ephemeral=True) 
-               return
             await CommandHandler.cmd_join(self.game, interaction, ["join"])
-            await interaction.response.send_message(view=bet_ui, ephemeral=True)
+            #await interaction.response.send_message(view=bet_ui, ephemeral=True)
         except Exception as e:
             print("Exception:", e)
             traceback.print_exc()
@@ -148,6 +126,7 @@ class GeneralCreateUI(GeneralCommandsUI):
         async def select_callback( interaction: discord.Interaction):
             type = int(select.values[0])  # Get the selected value
             await CommandHandler.cmd_create(interaction, self.games, self.data, GameType(type))
+            await interaction.response.send_message(f"You created a game of {GameType(type).name}", delete_after=1)
 
         select.callback = select_callback
         self.add_item(select)
@@ -161,12 +140,11 @@ class GeneralJoinUI(GeneralCommandsUI):
                 options=options,
                 placeholder="Choose game you want to join"
             )
-        
 
         async def select_callback(interaction: discord.Interaction):
             type = int(select.values[0])  # Get the selected value
             await CommandHandler.cmd_join(self.games[(interaction.channel.id, type)], interaction, ["join"])
-            await interaction.response.send_message(view=JoinUI(games[(interaction.channel.id, GameType(type))], GameType(type)))
+            #await interaction.response.send_message(view=JoinUI(games[(interaction.channel.id, GameType(type))], GameType(type)))
         
         select.callback = select_callback
         self.add_item(select)
@@ -181,7 +159,6 @@ class GeneralPlayUI(GeneralCommandsUI):
                 placeholder="Choose game you want to play"
             )
         
-
         async def select_callback(interaction: discord.Interaction):
             type = int(select.values[0])  # Get the selected value
             if ((interaction.channel.id, type) not in games.keys()):
