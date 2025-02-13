@@ -125,28 +125,7 @@ class CommandHandler:
             if (game.state == GameState.RUNNING):
                 await CommandHandler.send(f"Game is running, wait for the end", source)
                 return
-            from ui import GameUserInterface
-            bet_ui: GameUserInterface
-            match game.type:
-                case GameType.BACCARAT:
-                    from baccarat.ui_baccarat import BaccaratBetUI
-                    bet_ui = BaccaratBetUI(game)
-                case GameType.COINFLIP:
-                    from rng_games.ui_rng import CoinflipUserInterface
-                    bet_ui = CoinflipUserInterface(game)
-                case GameType.ROLLTHEDICE:
-                    from rng_games.ui_rng import RollTheDiceUserInterface
-                    bet_ui = RollTheDiceUserInterface(game)
-                case GameType.GUESSNUMBER:
-                    from rng_games.ui_rng import GuessNumberUserInterface
-                    bet_ui = GuessNumberUserInterface(game)
-                case GameType.POKER:
-                    from poker.ui_poker import PokerBetUI
-                    bet_ui = PokerBetUI(game)
-                case _:
-                    from ui import BetUI
-                    bet_ui = BetUI(game)
-
+            
             status = game.add_player(CommandHandler.get_info(source))
             if (status == E.INV_STATE):
                 await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True, view=bet_ui)
@@ -154,6 +133,8 @@ class CommandHandler:
             if status == E.BLOCKED:
                 await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now joining disabled!", source, ephemeral=True)
                 return
+            from ui import GameUserInterface
+            bet_ui: GameUserInterface = CommandHandler.get_game_ui(game)
             await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
             await CommandHandler.send("", source, ephemeral=True, view=bet_ui)
             
@@ -233,6 +214,30 @@ class CommandHandler:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You are not in the game! You must use !{GameType(game.type).name.lower()} join to participate", source, ephemeral=True)
             return
         await CommandHandler.send(f"Player {CommandHandler.get_info(source).display_name} needs more time to think and is now not ready", source)
+
+
+    @staticmethod
+    def get_game_ui(game: Game):
+        match game.type:
+                case GameType.BACCARAT:
+                    from baccarat.ui_baccarat import BaccaratBetUI
+                    bet_ui = BaccaratBetUI(game)
+                case GameType.COINFLIP:
+                    from rng_games.ui_rng import CoinflipUserInterface
+                    bet_ui = CoinflipUserInterface(game)
+                case GameType.ROLLTHEDICE:
+                    from rng_games.ui_rng import RollTheDiceUserInterface
+                    bet_ui = RollTheDiceUserInterface(game)
+                case GameType.GUESSNUMBER:
+                    from rng_games.ui_rng import GuessNumberUserInterface
+                    bet_ui = GuessNumberUserInterface(game)
+                case GameType.POKER:
+                    from poker.ui_poker import PokerBetUI
+                    bet_ui = PokerBetUI(game)
+                case _:
+                    from ui import BetUI
+                    bet_ui = BetUI(game)
+        return bet_ui
 
 
     create_dict = {
