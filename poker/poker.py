@@ -342,97 +342,97 @@ class Poker(CardGame):
         res = []
 
         for player in players:
-            res.append(player[0])
+            res.append(player[0], player[2])
 
         return res
 
     def straight_flush(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
-        for player, curr_values in players:
+        for player, curr_values, hand in players:
             curr_max = curr_values[0]
             if curr_max > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = curr_max
             elif curr_max == max_val:
-                res.append(player)
+                res.append((player, hand))
         return res
 
     def four_of_a_kind(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         max_div = 2
-        for player, curr_values in players:
+        for player, curr_values, hand in players:
             curr_div = curr_values[0]
             if curr_div == curr_values[1]:
                 curr_div = curr_values[4]
 
             poker = curr_values[2]
             if poker > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = poker
                 max_div = curr_div
             elif poker == max_val:
                 if curr_div > max_div:
-                    res = [player]
+                    res = [(player, hand)]
                     max_div = curr_div
                 elif curr_div == max_div:
-                    res.append(player)
+                    res.append((player, hand))
         return res
 
     def full_house(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_trips = 2
         max_pair = 2
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             trips = curr_value[2]
             pair = curr_value[0]
             if trips != curr_value[4]:
                 pair = curr_value[4]
 
             if trips > max_trips:
-                res = [player]
+                res = [(player, hand)]
                 max_trips = trips
                 max_pair = pair
             elif trips == max_trips:
                 if pair > max_pair:
-                    res = [player]
+                    res = [(player, hand)]
                     max_pair = pair
                 elif pair == max_pair:
-                    res.append(player)
+                    res.append((player, hand))
         return res
 
     def flush(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_flush = [2, 2, 2, 2, 2]
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             if curr_value > max_flush:
-                res = [player]
+                res = [(player, hand)]
                 max_flush = curr_value
             elif curr_value == max_flush:
-                    res.append(player)
+                    res.append((player, hand))
         return res
 
     def straight(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             curr_max = curr_value[0]
             if curr_value[1] == 5:  # if 14, 5, 4, 3, 2
                 curr_max = 5
 
             if curr_max > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = curr_max
             elif curr_max == max_val:
-                res.append(player)
+                res.append((player, hand))
         return res
 
     def three_of_a_kind(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         max_div = [2, 2]
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             curr = {}
             for v in curr_value:
                 curr[v] = curr.get(v, 0) + 1
@@ -445,22 +445,22 @@ class Poker(CardGame):
             trips = curr_value[2]
 
             if trips > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = trips
                 max_div = div
             elif trips == max_val:
                 if div > max_div:
-                    res = [player]
+                    res = [(player, hand)]
                     max_div = div
                 elif div == max_div:
-                    res.append(player)
+                    res.append((player, hand))
         return res
 
     def two_pair(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2]   # bigger pair, smaller pair, div
         
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             curr = {}
             val = []
             for v in curr_value:
@@ -476,16 +476,16 @@ class Poker(CardGame):
             val.sort(reverse=True)
             val.append(one)
             if val > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = val
             elif val == max_val:
-                res.append(player)
+                res.append((player, hand))
         return res
 
     def one_pair(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2, 2]  # pair, div1, div2, div3
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             curr = {}
             val = []
             for v in curr_value:
@@ -501,19 +501,19 @@ class Poker(CardGame):
             val.sort(reverse=True)
             val = pair + val
             if val > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = val
             elif val == max_val:
-                res.append(player)
+                res.append((player, hand))
         return res
 
     def high_card(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2, 2, 2]
-        for player, curr_value in players:
+        for player, curr_value, hand in players:
             if curr_value > max_val:
-                res = [player]
+                res = [(player, hand)]
                 max_val = curr_value
             elif curr_value == max_val:
-                res.append(player)
+                res.append((player, hand))
         return res
