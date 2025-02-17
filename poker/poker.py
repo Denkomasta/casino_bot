@@ -203,7 +203,9 @@ class Poker(CardGame):
     
     def evaluate_winners(self):
         for pot in self.pots.values():
-            pot.winners = self.determine_winner(pot.players)
+            best_rank, temp = self.determine_winner(pot.players)
+            best_rank += 0  # TODO add usage of rank for printing of result message
+            pot.winners = [record[0] for record in temp]
 
             for winner in pot.winners:
                 winner.bet.value += pot.bank // len(pot.winners)
@@ -246,7 +248,7 @@ class Poker(CardGame):
     def sort_poker_cards(self, cards: list[Card]) -> list[Card]:
         return sorted(cards, key=lambda card: card.value, reverse=True)
 
-    def determine_winner(self, players: list[PokerPlayer]) -> list[PokerPlayer]:     # use ranks and values to determine winner
+    def determine_winner(self, players: list[PokerPlayer]) -> tuple[int, list[tuple[PokerPlayer, list[Card]]]]:     # use ranks and values to determine winner
         for player in players:
             if len(player.eval_cards) == 0:
                 player.eval_cards = player.cards + self.table.cards
@@ -257,31 +259,32 @@ class Poker(CardGame):
         best_players = []
 
         for player in players:
-            for curr, vals in best_hands[player]:
+            for curr, vals, hand in best_hands[player]:
                 if curr > best_rank:
-                    best_players = [(player, vals)]
+                    best_players = [(player, vals, hand)]
                     best_rank = curr
                 elif curr == best_rank:
-                    best_players.append((player, vals))
+                    best_players.append((player, vals, hand))
 
         for player in players:
             player.eval_cards = self.revert_aces_value(player.eval_cards)
 
         if len(best_players) == 1:
-            return [best_players[0][0]]
-        return self.resolve_even_rank(best_players, best_rank)
+            return (best_rank, [(best_players[0][0], best_players[0][2])])
+        return (best_rank, self.resolve_even_rank(best_players, best_rank))
 
-    def best_hand(self, player: PokerPlayer) -> list[tuple[int, list[int]]]:
+    def best_hand(self, player: PokerPlayer) -> list[tuple[int, list[int], list[Card]]]:
         all_five_card_hands = combinations(player.eval_cards, 5)
         best_rank = 0
         res = []
-        for hand in all_five_card_hands:
-            rank, values = self.get_hand_rank(list(hand))
+        for h in all_five_card_hands:
+            hand = list(h)
+            rank, values = self.get_hand_rank(hand)
             if rank > best_rank:
                 best_rank = rank
-                res = [(rank, values)]
+                res = [(rank, values, hand)]
             elif rank == best_rank:
-                res.append((rank, values))
+                res.append((rank, values, hand))
         return res
 
     def get_hand_rank(self, hand: list[Card]) -> tuple[int, list[int]]:
@@ -312,7 +315,7 @@ class Poker(CardGame):
             return (1, values)  # One Pair
         return (0, values)  # High Card
     
-    def resolve_even_rank(self, players: list[tuple[CardPlayer, list[int]]], rank: int) -> list[CardPlayer]:
+    def resolve_even_rank(self, players: list[tuple[PokerPlayer, list[int], list[Card]]], rank: int) -> list[tuple[CardPlayer, list[Card]]]:
         card_combinations = {
             9: self.royal_flush,
             8: self.straight_flush,
@@ -328,14 +331,14 @@ class Poker(CardGame):
         temp = card_combinations[rank](players)
         seen = set()
         res = []
-        for player in temp:
+        for player, hand in temp:
             if player.player_info.id not in seen:
-                res.append(player)
+                res.append((player, hand))
                 seen.add(player.player_info.id)
         return res
-    
+
     # !!! player.cards needs to be sorted and change ace value from 1 to 14 !!!
-    def royal_flush(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def royal_flush(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
 
         for player in players:
@@ -343,7 +346,7 @@ class Poker(CardGame):
 
         return res
 
-    def straight_flush(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def straight_flush(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         for player, curr_values in players:
@@ -355,7 +358,7 @@ class Poker(CardGame):
                 res.append(player)
         return res
 
-    def four_of_a_kind(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def four_of_a_kind(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         max_div = 2
@@ -377,7 +380,7 @@ class Poker(CardGame):
                     res.append(player)
         return res
 
-    def full_house(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def full_house(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_trips = 2
         max_pair = 2
@@ -399,7 +402,7 @@ class Poker(CardGame):
                     res.append(player)
         return res
 
-    def flush(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def flush(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_flush = [2, 2, 2, 2, 2]
         for player, curr_value in players:
@@ -410,7 +413,7 @@ class Poker(CardGame):
                     res.append(player)
         return res
 
-    def straight(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def straight(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         for player, curr_value in players:
@@ -425,7 +428,7 @@ class Poker(CardGame):
                 res.append(player)
         return res
 
-    def three_of_a_kind(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def three_of_a_kind(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = 2
         max_div = [2, 2]
@@ -453,7 +456,7 @@ class Poker(CardGame):
                     res.append(player)
         return res
 
-    def two_pair(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def two_pair(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2]   # bigger pair, smaller pair, div
         
@@ -479,7 +482,7 @@ class Poker(CardGame):
                 res.append(player)
         return res
 
-    def one_pair(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def one_pair(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2, 2]  # pair, div1, div2, div3
         for player, curr_value in players:
@@ -504,7 +507,7 @@ class Poker(CardGame):
                 res.append(player)
         return res
 
-    def high_card(self, players: list[tuple[CardPlayer, list[int]]]) -> list[CardPlayer]:
+    def high_card(self, players: list[tuple[PokerPlayer, list[int], list[Card]]]) -> list[tuple[CardPlayer, list[Card]]]:
         res = []
         max_val = [2, 2, 2, 2, 2]
         for player, curr_value in players:
