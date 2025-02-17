@@ -109,23 +109,21 @@ class StartUI(UI):
         await interaction.response.send_message("Game started succesfully", delete_after=0)
 
 class GeneralCommandsUI(discord.ui.View):
-    def __init__(self, games: dict[tuple[int, int], Game]):
+    def __init__(self):
         super().__init__()
-        self.games = games
 
 class GeneralCreateUI(GeneralCommandsUI):
-    def __init__(self, games: dict[tuple[int, int], Game], data: Database, options):
-        super().__init__(games)
-        self.data = data            
+    def __init__(self, options):
+        super().__init__()
             
-        select: discord.ui.Select = discord.ui.Select(
+        select = discord.ui.Select(
                 options=options,
                 placeholder="Choose game to create"
             )
         
         async def select_callback( interaction: discord.Interaction):
             type = int(select.values[0])  # Get the selected value
-            await CommandHandler.cmd_create(interaction, self.games, self.data, GameType(type))
+            await CommandHandler.cmd_create(interaction, GameType(type))
             await interaction.response.send_message(f"You created a game of {GameType(type).name}", delete_after=1)
 
         select.callback = select_callback
@@ -133,37 +131,38 @@ class GeneralCreateUI(GeneralCommandsUI):
 
 
 class GeneralJoinUI(GeneralCommandsUI):
-    def __init__(self, games: dict[tuple[int, int], Game], options):
-        super().__init__(games)
+    def __init__(self, options):
+        super().__init__()
 
-        select: discord.ui.Select = discord.ui.Select(
+        select = discord.ui.Select(
                 options=options,
                 placeholder="Choose game you want to join"
             )
 
         async def select_callback(interaction: discord.Interaction):
+            import casino_bot
             type = int(select.values[0])  # Get the selected value
-            await CommandHandler.cmd_join(self.games[(interaction.channel.id, type)], interaction, ["join"])
+            await CommandHandler.cmd_join(casino_bot.Games[(interaction.channel.id, type)], interaction, ["join"])
             #await interaction.response.send_message(view=JoinUI(games[(interaction.channel.id, GameType(type))], GameType(type)))
         
         select.callback = select_callback
         self.add_item(select)
 
 class GeneralPlayUI(GeneralCommandsUI):
-    def __init__(self, games: dict[tuple[int, int], Game], data: Database):
-        super().__init__(games)
-        self.data = data
+    def __init__(self):
+        super().__init__()
 
-        select: discord.ui.Select = discord.ui.Select(
+        select = discord.ui.Select(
                 options=[discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType],
                 placeholder="Choose game you want to play"
             )
         
         async def select_callback(interaction: discord.Interaction):
+            import casino_bot
             type = int(select.values[0])  # Get the selected value
-            if ((interaction.channel.id, type) not in games.keys()):
-                await CommandHandler.cmd_create(interaction, self.games, self.data, type)
-            await CommandHandler.cmd_join(self.games[(interaction.channel.id, type)], interaction, ["join"])
+            if ((interaction.channel.id, type) not in casino_bot.Games.keys()):
+                await CommandHandler.cmd_create(interaction, GameType(type))
+            await CommandHandler.cmd_join(casino_bot.Games[(interaction.channel.id, type)], interaction, ["join"])
 
         
         select.callback = select_callback

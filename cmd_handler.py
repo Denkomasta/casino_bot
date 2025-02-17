@@ -49,54 +49,58 @@ class CommandHandler:
             return source.author
     
     @staticmethod
-    async def join(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+    async def join(source: commands.Context | discord.Interaction):
         try:
-            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
+            import casino_bot
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
             if len(options) == 0:
                 from ui import GeneralCreateUI
-                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
-                await source.channel.send("There is no existing game in the channel currently", view=GeneralCreateUI(games, data, options))
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in casino_bot.Games.keys()]
+                await source.channel.send("There is no existing game in the channel currently", view=GeneralCreateUI(options))
                 return
             from ui import GeneralJoinUI
-            await source.channel.send(view=GeneralJoinUI(games, options))
+            await source.channel.send(view=GeneralJoinUI(options))
         except:
             traceback.print_exc()
 
     @staticmethod
-    async def play(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+    async def play(source: commands.Context | discord.Interaction):
         try:
             from ui import GeneralPlayUI
-            await source.channel.send(view=GeneralPlayUI(games, data))
+            import casino_bot
+            await source.channel.send(view=GeneralPlayUI())
         except:
             traceback.print_exc()
 
     @staticmethod
-    async def create(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database):
+    async def create(source: commands.Context | discord.Interaction):
         try:
-            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in games.keys()]
+            import casino_bot
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in casino_bot.Games.keys()]
             if len(options) == 0:
                 from ui import GeneralJoinUI
-                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in games.keys() if id == source.channel.id]
-                await source.channel.send("All types of games already exists in this channel", view=GeneralJoinUI(games, options))
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
+                await source.channel.send("All types of games already exists in this channel", view=GeneralJoinUI(options))
                 return
             from ui import GeneralCreateUI
-            await source.channel.send(view=GeneralCreateUI(games, data, options=options))
+            await source.channel.send(view=GeneralCreateUI(options=options))
         except:
             traceback.print_exc()
 
     @staticmethod
-    async def cmd_create(source: commands.Context | discord.Interaction, games: dict[(int, int), Game], data: Database, type: GameType):
+    async def cmd_create(source: commands.Context | discord.Interaction, type: GameType):
         try:
-            if ((source.channel.id, type) in games.keys()):
+            import casino_bot
+            if ((source.channel.id, type) in casino_bot.Games.keys()):
                 await CommandHandler.send(f'Game of {GameType(type).name} already exists in your channel', source)
                 return
             
             if type not in CommandHandler.create_dict.keys():
                 await CommandHandler.send(f"Game of {GameType(type).name} not implemented yet", source, ephemeral=True)
                 return
-            game: Game = CommandHandler.create_dict[type](data, source.channel)
+            game: Game = CommandHandler.create_dict[type](casino_bot.Data, source.channel)
            
-            games[(source.channel.id, type)] = game
+            casino_bot.Games[(source.channel.id, type)] = game
             if game.type == GameType.POKER:
                 from poker.ui_poker import PokerSettingsUI
                 view = PokerSettingsUI(game)
@@ -104,19 +108,19 @@ class CommandHandler:
                 await view.wait()
             await game.channel.send(f'Game of {GameType(type).name} was created')
             from ui import JoinUI
-            await game.channel.send(view=JoinUI(games[(source.channel.id, type)], type))
+            await game.channel.send(view=JoinUI(casino_bot.Games[(source.channel.id, type)], type))
         except:
             traceback.print_exc()
 
     @staticmethod
-    async def cmd_exit(source: commands.Context | discord.Interaction, games: dict[tuple[int, int], Game], data: Database, type: GameType):
-        if ((source.channel.id, type) not in games.keys()):
-            await CommandHandler.send(f'Game of {GameType(type).name} does not exist', source, ephemeral=True)
+    async def cmd_exit(source: commands.Context | discord.Interaction, game: Game):
+        import casino_bot
+        if ((game.channel.id, game.type) not in casino_bot.Games.keys()):
+            await CommandHandler.send(f'Game of {GameType(game.type).name} does not exist', source, ephemeral=True)
             return
-        games.pop((source.channel.id, GameType.BLACKJACK))
-        await source.channel.send(f'Game of {GameType(type).name} was exited')
+        casino_bot.Games.pop((game.channel.id, game.type))
+        await game.channel.send(f'Game of {GameType(game.type).name} was exited')
         return
-
 
     @staticmethod
     async def cmd_join(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
@@ -127,14 +131,14 @@ class CommandHandler:
                 return
             
             status = game.add_player(CommandHandler.get_info(source))
+            from ui import GameUserInterface
+            bet_ui: GameUserInterface = CommandHandler.get_game_ui(game)
             if (status == E.INV_STATE):
                 await CommandHandler.send(f"Player {CommandHandler.get_name(source)} is already in the game!", source, ephemeral=True, view=bet_ui)
                 return
             if status == E.BLOCKED:
                 await CommandHandler.send(f"{CommandHandler.get_info(source).mention} The game has now joining disabled!", source, ephemeral=True)
                 return
-            from ui import GameUserInterface
-            bet_ui: GameUserInterface = CommandHandler.get_game_ui(game)
             await game.channel.send(f"Player {CommandHandler.get_name(source)} joined the game of {GameType(game.type).name}!")
             await CommandHandler.send("", source, ephemeral=True, view=bet_ui)
             
@@ -176,9 +180,10 @@ class CommandHandler:
              return
         await CommandHandler.send(f"Player {CommandHandler.get_name(source)} left the game!", source, ephemeral=True)
         if (len(game.players) == 0):
-            #TODO exit game
-            pass
-
+            try:
+                await CommandHandler.cmd_exit(source, game)
+            except:
+                traceback.print_exc()
 
     @staticmethod
     async def cmd_ready(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
@@ -218,6 +223,7 @@ class CommandHandler:
 
     @staticmethod
     def get_game_ui(game: Game):
+        bet_ui = None
         match game.type:
                 case GameType.BACCARAT:
                     from baccarat.ui_baccarat import BaccaratBetUI

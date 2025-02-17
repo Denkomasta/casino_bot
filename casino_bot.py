@@ -19,7 +19,7 @@ from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler,
 from time import time
 import traceback
 
-Games: dict[(int, int), Game] = {}
+Games: dict[tuple[int, int], Game] = {}
 Data: Database = Database()
 
 load_dotenv()
@@ -63,21 +63,21 @@ async def debug(ctx):
 async def play(ctx: commands.Context):
     global Games
     global Data
-    await CommandHandler.play(ctx, Games, Data)
+    await CommandHandler.play(ctx)
 
 # command for creating
 @bot.command(name='create', help='Choose game to create')
 async def create(ctx: commands.Context):
     global Games
     global Data
-    await CommandHandler.create(ctx, Games, Data)
+    await CommandHandler.create(ctx)
 
 # command for joining
 @bot.command(name='join', help='Choose game to join')
 async def join(ctx: commands.Context):
     global Games
     global Data
-    await CommandHandler.join(ctx, Games, Data)
+    await CommandHandler.join(ctx)
 
 # command for daily drop
 @bot.command(name='drop', help="Get your daily drop of money!")
