@@ -180,10 +180,11 @@ class CommandHandler:
              return
         await CommandHandler.send(f"Player {CommandHandler.get_name(source)} left the game!", source, ephemeral=True)
         if (len(game.players) == 0):
-            try:
-                await CommandHandler.cmd_exit(source, game)
-            except:
-                traceback.print_exc()
+            await CommandHandler.cmd_exit(source, game)
+            return
+        if (game.are_players_ready()):
+            from ui import StartUI
+            await game.channel.send(view=StartUI(game))
 
     @staticmethod
     async def cmd_ready(game: Game, source: commands.Context | discord.Interaction, args: list[str]):
