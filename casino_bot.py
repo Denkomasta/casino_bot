@@ -13,7 +13,7 @@ from baccarat.cmd_handler_baccarat import BaccaratCmdHandler
 from base_classes import Game
 from cmd_handler import CommandHandler
 from enums import GameType
-from ui import JoinUI
+from ui import JoinUI, ControlsUI
 from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber, Roulette
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 from time import time
@@ -78,6 +78,11 @@ async def join(ctx: commands.Context):
     global Games
     global Data
     await CommandHandler.join(ctx)
+
+# command for controls
+@bot.command(name='controls', help='Choose controls u need')
+async def controls(ctx: commands.Context):
+    await ctx.send(view=ControlsUI(ctx))
 
 # command for daily drop
 @bot.command(name='drop', help="Get your daily drop of money!")

@@ -260,3 +260,86 @@ class BetModal(discord.ui.Modal, title="Place Your Bet"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await CommandHandler.cmd_bet(self.game, interaction, ["join", self.bet_amount.value])
+
+
+class ControlsUI(discord.ui.View):
+
+    def __init__(self, source):
+        super().__init__()
+
+        import casino_bot
+        for channel_id, type in casino_bot.Games.keys():
+            if channel_id == source.channel.id:
+                button = discord.ui.Button(
+                    label=f"{GameType(type).name}",
+                    style=discord.ButtonStyle.blurple,
+                    row=3,
+                    custom_id=f"{GameType(type)}"
+                )
+                button.callback = lambda i, b=button: self.game_controls(i, b)
+                self.add_item(button)
+
+    async def game_controls(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.send_message(view=GameControlsUI(GameType(int(button.custom_id))))
+
+        
+
+    @discord.ui.button(label="PLAY", style=discord.ButtonStyle.blurple, row=1)
+    async def handle_play(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.play(interaction)
+
+    @discord.ui.button(label="CREATE", style=discord.ButtonStyle.blurple, row=1)
+    async def handle_create(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.create(interaction)
+
+    @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple, row=1)
+    async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.join(interaction)
+
+    @discord.ui.button(label="BALANCE", style=discord.ButtonStyle.grey, row=2)
+    async def handle_balance(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.balance(interaction)
+
+    @discord.ui.button(label="DROP", style=discord.ButtonStyle.green, row=2)
+    async def handle_drop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.drop(interaction)
+    
+    @discord.ui.button(label="LEADERBOARD", style=discord.ButtonStyle.grey, row=2)
+    async def handle_leaderboard(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.leaderboard(interaction)
+    
+
+class GameControlsUI(discord.ui.View):
+
+    def __init__(self, type):
+        super().__init__()
+        self.type = type
+
+        options = []
+        options.append(discord.SelectOption(label="JOIN/LEAVE", value="JOIN/LEAVE"))
+        options.append(discord.SelectOption(label="GENERAL CONTROLS", value="GENERAL"))
+        match type:
+            case GameType.BLACKJACK:
+                options.append(discord.SelectOption(label="HIT/STAND", value="HIT/STAND"))
+        select = discord.ui.Select(
+                options=options,
+                placeholder="Choose controls you need"
+            )
+        
+        async def select_callback(interaction: discord.Interaction):
+            import casino_bot
+            view = None
+            match select.values[0]:
+                case "JOIN/LEAVE":
+                    view = JoinLeaveUI(casino_bot.Games[(interaction.channel.id, self.type)], self.type)
+                case "GENERAL":
+                    view = CommandHandler.get_game_ui(casino_bot.Games[(interaction.channel.id, self.type)])
+                case "HIT/STAND":
+                    from blackjack.ui_blackjack import BlackJackHitStandUI
+                    view = BlackJackHitStandUI(casino_bot.Games[(interaction.channel.id, self.type)])
+            await interaction.response.send_message(view=view, ephemeral=True)                    
+                
+        select.callback = select_callback
+        self.add_item(select)
+        
+    

@@ -56,10 +56,10 @@ class CommandHandler:
             if len(options) == 0:
                 from ui import GeneralCreateUI
                 options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in casino_bot.Games.keys()]
-                await source.channel.send("There is no existing game in the channel currently", view=GeneralCreateUI(options))
+                await CommandHandler.send("There is no existing game in the channel currently", source, view=GeneralCreateUI(options), ephemeral=True)
                 return
             from ui import GeneralJoinUI
-            await source.channel.send(view=GeneralJoinUI(options))
+            await CommandHandler.send("", source, view=GeneralJoinUI(options), ephemeral=True)
         except:
             traceback.print_exc()
 
@@ -68,7 +68,7 @@ class CommandHandler:
         try:
             from ui import GeneralPlayUI
             import casino_bot
-            await source.channel.send(view=GeneralPlayUI())
+            await CommandHandler.send("", source, ephemeral=True, view=GeneralPlayUI())
         except:
             traceback.print_exc()
 
@@ -80,12 +80,49 @@ class CommandHandler:
             if len(options) == 0:
                 from ui import GeneralJoinUI
                 options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
-                await source.channel.send("All types of games already exists in this channel", view=GeneralJoinUI(options))
+                await CommandHandler.send("All types of games already exists in this channel", source, ephemeral=True, view=GeneralJoinUI(options))
                 return
             from ui import GeneralCreateUI
-            await source.channel.send(view=GeneralCreateUI(options=options))
+            await CommandHandler.send("", source, ephemeral=True, view=GeneralCreateUI(options=options))
         except:
             traceback.print_exc()
+
+    @staticmethod
+    async def balance(source: commands.Context | discord.Interaction):
+        import casino_bot
+        await CommandHandler.send(f'{casino_bot.Data.get_player_name(CommandHandler.get_id(source))} has casino balance: {casino_bot.Data.get_player_balance(CommandHandler.get_id(source))}', source, ephemeral=True, delete_after=5)
+
+
+    @staticmethod
+    async def drop(source: commands.Context | discord.Interaction):
+        import casino_bot
+        import time
+        if casino_bot.Data.data.get(str(CommandHandler.get_id(source))) is None:
+            await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You must be a member of {casino_bot.BOTNAME} to participate!", source, ephemeral=True, delete_after=5)
+            return
+        time_since_last = time.time() - casino_bot.Data.get_last_drop(CommandHandler.get_id(source))
+        if time_since_last < 86400:
+            time_to_next = 86400 - time_since_last
+            await CommandHandler.send(f"You'll be able to get your next drop in {int(time_to_next // 3600)} hours and {int((time_to_next // 60) % 60)} minutes", source, ephemeral=True, delete_after=5)
+            return
+        casino_bot.Data.change_player_balance(CommandHandler.get_id(source), 2000)
+        casino_bot.Data.update_last_drop(CommandHandler.get_id(source))
+        await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You got your daily drop of 2000 coins!", source, ephemeral=True, delete_after=5)
+
+    @staticmethod
+    async def leaderboard(source: commands.Context | discord.Interaction):
+        import casino_bot
+        header = f"{'Rank':<5} {'Name':<25} {'Balance':<10}\n"
+        header += "-" * 40 + "\n"
+        
+        rows = ""
+        for i, (name, balance) in enumerate(casino_bot.Data.get_leaderboard()):
+            rank = i + 1
+            name = name[:25]
+            rows += f"{rank:<5} {name:<25} {balance:<10}\n"
+
+        table = header + rows 
+        await CommandHandler.send(f"```\n{table}\n```", source)    # Code formatting
 
     @staticmethod
     async def cmd_create(source: commands.Context | discord.Interaction, type: GameType):
