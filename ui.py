@@ -116,19 +116,40 @@ class GeneralCommandsUI(discord.ui.View):
 class GeneralCreateUI(GeneralCommandsUI):
     def __init__(self, options):
         super().__init__()
+
+        select_in_thread = discord.ui.Select(
+                options=[
+                    discord.SelectOption(label="Create game in CURRENT channel", value="False", default=True),
+                    discord.SelectOption(label="Create game in a NEW THREAD", value="True")
+                    ],
+                placeholder="Where do you want to create the game?",
+            )
             
-        select = discord.ui.Select(
+        select_type = discord.ui.Select(
                 options=options,
                 placeholder="Choose game to create"
             )
         
-        async def select_callback( interaction: discord.Interaction):
-            type = int(select.values[0])  # Get the selected value
-            await CommandHandler.cmd_create(interaction, GameType(type))
-            await interaction.response.send_message(f"You created a game of {GameType(type).name}", delete_after=1)
+        async def select_in_thread_callback( interaction: discord.Interaction):
+            in_thread = False if len(select_in_thread.values) == 0 or select_in_thread.values[0] == "False" else True
+            if in_thread:
+                await interaction.response.send_message("Game will be created in a new thread", ephemeral=True, delete_after=5)
+                return
+            await interaction.response.send_message("Game will be created in this current channel", ephemeral=True, delete_after=5)
 
-        select.callback = select_callback
-        self.add_item(select)
+        async def select_type_callback( interaction: discord.Interaction):
+            try:
+                in_thread = False if len(select_in_thread.values) == 0 or select_in_thread.values[0] == "False" else True
+                type = int(select_type.values[0])  # Get the selected value
+                await CommandHandler.cmd_create(interaction, GameType(type), in_thread=in_thread)
+                await interaction.response.send_message(f"You created a game of {GameType(type).name}", delete_after=1)
+            except:
+                traceback.print_exc()
+
+        select_type.callback = select_type_callback
+        select_in_thread.callback = select_in_thread_callback
+        self.add_item(select_in_thread)
+        self.add_item(select_type)
 
 
 class GeneralJoinUI(GeneralCommandsUI):

@@ -132,7 +132,7 @@ class CommandHandler:
         await CommandHandler.send(f"```\n{table}\n```", source)    # Code formatting
 
     @staticmethod
-    async def cmd_create(source: commands.Context | discord.Interaction, type: GameType):
+    async def cmd_create(source: commands.Context | discord.Interaction, type: GameType, in_thread=False):
         try:
             if ((source.channel.id, type) in global_vars.Games.keys()):
                 await CommandHandler.send(f'Game of {GameType(type).name} already exists in your channel', source)
@@ -141,9 +141,19 @@ class CommandHandler:
             if type not in CommandHandler.create_dict.keys():
                 await CommandHandler.send(f"Game of {GameType(type).name} not implemented yet", source, ephemeral=True)
                 return
-            game: Game = CommandHandler.create_dict[type](source.channel)
+            
+            channel = source.channel
+
+            if in_thread:
+                thread: discord.Thread = await source.channel.create_thread(
+                    name=f"Game of {GameType(type).name}", 
+                    type=discord.ChannelType.public_thread
+                )
+                channel = thread
+
+            game: Game = CommandHandler.create_dict[type](channel)
            
-            global_vars.Games[(source.channel.id, type)] = game
+            global_vars.Games[(channel.id, type)] = game
             if game.type == GameType.POKER:
                 from poker.ui_poker import PokerSettingsUI
                 view = PokerSettingsUI(game)
@@ -151,9 +161,10 @@ class CommandHandler:
                 await view.wait()
             await game.channel.send(f'Game of {GameType(type).name} was created')
             from ui import JoinUI
-            await game.channel.send(view=JoinUI(global_vars.Games[(source.channel.id, type)], type))
+            await game.channel.send(view=JoinUI(global_vars.Games[(channel.id, type)], type))
         except:
             traceback.print_exc()
+
 
     @staticmethod
     async def cmd_exit(source: commands.Context | discord.Interaction, game: Game):
@@ -162,6 +173,8 @@ class CommandHandler:
             return
         global_vars.Games.pop((game.channel.id, game.type))
         await game.channel.send(f'Game of {GameType(game.type).name} was exited')
+        if isinstance(game.channel, discord.Thread):
+            await game.channel.delete()
         return
 
     @staticmethod

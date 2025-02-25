@@ -119,6 +119,14 @@ async def unsubscribe(ctx):
     global_vars.Data.delete_player(ctx)
     await ctx.send(f'{ctx.author.global_name}\'s account was deleted.')
 
+# command thread
+@bot.command(name='thread', help='Creates blackjack in thread')
+async def thread(ctx):
+    try:
+        await CommandHandler.cmd_thread_create(ctx, GameType.BLACKJACK)
+    except:
+        traceback.print_exc()
+
 # command info
 @bot.command(name='info', help=f'Displays information about {BOTNAME}!')
 async def info(ctx):
