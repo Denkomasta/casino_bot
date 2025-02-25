@@ -64,6 +64,18 @@ class CommandHandler:
             traceback.print_exc()
 
     @staticmethod
+    async def leave(source: commands.Context | discord.Interaction):
+        try:
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in global_vars.Games.keys() if id == source.channel.id and global_vars.Games[(id, type)].players.get(CommandHandler.get_id(source)) is not None]
+            if len(options) == 0:
+                await CommandHandler.send("You are not joined in any game", source, ephemeral=True, delete_after=5)
+                return
+            from ui import GeneralLeaveUI
+            await CommandHandler.send("", source, view=GeneralLeaveUI(options), ephemeral=True)
+        except:
+            traceback.print_exc()
+
+    @staticmethod
     async def play(source: commands.Context | discord.Interaction):
         try:
             from ui import GeneralPlayUI

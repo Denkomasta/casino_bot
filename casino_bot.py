@@ -73,6 +73,11 @@ async def create(ctx: commands.Context):
 async def join(ctx: commands.Context):
     await CommandHandler.join(ctx)
 
+# command for joining
+@bot.command(name='leave', help='Choose game to leave')
+async def leave(ctx: commands.Context):
+    await CommandHandler.leave(ctx)
+
 # command for controls
 @bot.command(name='controls', help='Choose controls u need')
 async def controls(ctx: commands.Context):
@@ -105,7 +110,7 @@ async def subscribe(ctx):
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
 
 # command unsubsribe
-@bot.command(name='unsubscribe', help='Delete your casino account', aliases=["delete", "leave"])
+@bot.command(name='unsubscribe', help='Delete your casino account')
 async def unsubscribe(ctx):
     curr_balance = global_vars.Data.get_player_balance(ctx.author.id)
     if curr_balance < 0:

@@ -148,6 +148,25 @@ class GeneralJoinUI(GeneralCommandsUI):
         select.callback = select_callback
         self.add_item(select)
 
+
+class GeneralLeaveUI(GeneralCommandsUI):
+    def __init__(self, options):
+        super().__init__()
+
+        select = discord.ui.Select(
+                options=options,
+                placeholder="Choose game you want to leave"
+            )
+
+        async def select_callback(interaction: discord.Interaction):
+            type = int(select.values[0])  # Get the selected value
+            await CommandHandler.cmd_leave(global_vars.Games[(interaction.channel.id, type)], interaction, ["join"])
+            #await interaction.response.send_message(view=JoinUI(games[(interaction.channel.id, GameType(type))], GameType(type)))
+        
+        select.callback = select_callback
+        self.add_item(select)
+
+
 class GeneralPlayUI(GeneralCommandsUI):
     def __init__(self):
         super().__init__()
@@ -293,6 +312,10 @@ class ControlsUI(discord.ui.View):
     @discord.ui.button(label="JOIN", style=discord.ButtonStyle.blurple, row=1)
     async def handle_join(self, interaction: discord.Interaction, button: discord.ui.Button):
         await CommandHandler.join(interaction)
+
+    @discord.ui.button(label="LEAVE", style=discord.ButtonStyle.red, row=1)
+    async def handle_leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await CommandHandler.leave(interaction)
 
     @discord.ui.button(label="BALANCE", style=discord.ButtonStyle.grey, row=2)
     async def handle_balance(self, interaction: discord.Interaction, button: discord.ui.Button):
