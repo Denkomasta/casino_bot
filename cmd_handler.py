@@ -52,10 +52,10 @@ class CommandHandler:
     @staticmethod
     async def join(source: commands.Context | discord.Interaction):
         try:
-            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in global_vars.Games.keys() if id == source.channel.id]
             if len(options) == 0:
                 from ui import GeneralCreateUI
-                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in casino_bot.Games.keys()]
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in global_vars.Games.keys()]
                 await CommandHandler.send("There is no existing game in the channel currently", source, view=GeneralCreateUI(options), ephemeral=True)
                 return
             from ui import GeneralJoinUI
