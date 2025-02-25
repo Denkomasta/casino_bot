@@ -34,8 +34,8 @@ class PokerTable(CardPlayer):
 
 class Poker(CardGame):
     
-    def __init__(self, data: Database, channel: discord.TextChannel):
-        super().__init__(data, channel, GameType.POKER)
+    def __init__(self,channel: discord.TextChannel):
+        super().__init__(channel, GameType.POKER)
         self.table: PokerTable = PokerTable()
         self.blind = 20
         self.blind_index = 0

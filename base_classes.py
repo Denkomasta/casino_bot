@@ -4,6 +4,7 @@ from database import Database
 import discord
 from ascii_obj import Ascii
 from random import randrange
+import global_vars
 
 class Card:
     value: int
@@ -68,14 +69,12 @@ class Game(ABC):
     type: GameType
     players: dict[int, Player]
     state: GameState
-    data: Database
     channel: discord.TextChannel
 
-    def __init__(self, data: Database, channel: discord.TextChannel, type: GameType):
+    def __init__(self, channel: discord.TextChannel, type: GameType):
         self.players = {}
         self.state = GameState.WAITING_FOR_PLAYERS
         self.type = type
-        self.data = data
         self.channel = channel
 
     def add_player(self,  player_info: discord.User | discord.Member) -> E:
@@ -133,15 +132,15 @@ class Game(ABC):
         return True
         
     def collect_bet(self, player_info: discord.User | discord.Member, old: int, new: int) -> None:
-        self.data.change_player_balance(player_info.id, old - new)
+        global_vars.Data.change_player_balance(player_info.id, old - new)
 
     def return_bet(self, player_info: discord.User | discord.Member) -> None:
-        self.data.change_player_balance(player_info.id, self.players[player_info.id].bet.value)
+        global_vars.Data.change_player_balance(player_info.id, self.players[player_info.id].bet.value)
 
     def change_bet(self, player_info: discord.User | discord.Member, bet: int) -> E:
         if self.players.get(player_info.id, None) is None:
             return E.INV_PLAYER
-        if (bet - self.players[player_info.id].bet.value > self.data.get_player_balance(player_info.id)):
+        if (bet - self.players[player_info.id].bet.value > global_vars.Data.get_player_balance(player_info.id)):
             return E.INSUFFICIENT_FUNDS
         
         self.collect_bet(player_info, self.players[player_info.id].bet.value,  bet)
@@ -151,12 +150,12 @@ class Game(ABC):
     def collect_bets(self) -> None:
         for player in self.players.values():
             if (player.bet.value > 0):
-                self.data.change_player_balance(player.player_info.id, -player.bet.value)
+                global_vars.Data.change_player_balance(player.player_info.id, -player.bet.value)
     
     def give_winnings(self) -> None:
         for player in self.players.values():
             if (player.bet.winning > 0):
-                self.data.change_player_balance(player.player_info.id, player.bet.winning)
+                global_vars.Data.change_player_balance(player.player_info.id, player.bet.winning)
         
 
     def check_valid_player(self, player_info: discord.User | discord.Member):
@@ -172,8 +171,8 @@ class Game(ABC):
 class CardGame(Game):
     deck: list[Card]
 
-    def __init__(self, data: Database, channel: discord.TextChannel, type: GameType):
-        super().__init__(data, channel, type)
+    def __init__(self, channel: discord.TextChannel, type: GameType):
+        super().__init__(channel, type)
         self.deck = self.get_new_deck()
 
     def get_new_deck(self) -> list[Card]:

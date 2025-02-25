@@ -12,6 +12,7 @@ from rng_games.rng_games import Coinflip, RollTheDice, RNGGame
 from poker.cmd_handler_poker import PokerCmdHandler
 from database import Database
 from abc import ABC
+import global_vars
 
 class UI(discord.ui.View):
     game: Game
@@ -140,9 +141,8 @@ class GeneralJoinUI(GeneralCommandsUI):
             )
 
         async def select_callback(interaction: discord.Interaction):
-            import casino_bot
             type = int(select.values[0])  # Get the selected value
-            await CommandHandler.cmd_join(casino_bot.Games[(interaction.channel.id, type)], interaction, ["join"])
+            await CommandHandler.cmd_join(global_vars.Games[(interaction.channel.id, type)], interaction, ["join"])
             #await interaction.response.send_message(view=JoinUI(games[(interaction.channel.id, GameType(type))], GameType(type)))
         
         select.callback = select_callback
@@ -158,11 +158,10 @@ class GeneralPlayUI(GeneralCommandsUI):
             )
         
         async def select_callback(interaction: discord.Interaction):
-            import casino_bot
             type = int(select.values[0])  # Get the selected value
-            if ((interaction.channel.id, type) not in casino_bot.Games.keys()):
+            if ((interaction.channel.id, type) not in global_vars.Games.keys()):
                 await CommandHandler.cmd_create(interaction, GameType(type))
-            await CommandHandler.cmd_join(casino_bot.Games[(interaction.channel.id, type)], interaction, ["join"])
+            await CommandHandler.cmd_join(global_vars.Games[(interaction.channel.id, type)], interaction, ["join"])
 
         
         select.callback = select_callback
@@ -267,8 +266,7 @@ class ControlsUI(discord.ui.View):
     def __init__(self, source):
         super().__init__()
 
-        import casino_bot
-        for channel_id, type in casino_bot.Games.keys():
+        for channel_id, type in global_vars.Games.keys():
             if channel_id == source.channel.id:
                 button = discord.ui.Button(
                     label=f"{GameType(type).name}",
@@ -327,16 +325,15 @@ class GameControlsUI(discord.ui.View):
             )
         
         async def select_callback(interaction: discord.Interaction):
-            import casino_bot
             view = None
             match select.values[0]:
                 case "JOIN/LEAVE":
-                    view = JoinLeaveUI(casino_bot.Games[(interaction.channel.id, self.type)], self.type)
+                    view = JoinLeaveUI(global_vars.Games[(interaction.channel.id, self.type)], self.type)
                 case "GENERAL":
-                    view = CommandHandler.get_game_ui(casino_bot.Games[(interaction.channel.id, self.type)])
+                    view = CommandHandler.get_game_ui(global_vars.Games[(interaction.channel.id, self.type)])
                 case "HIT/STAND":
                     from blackjack.ui_blackjack import BlackJackHitStandUI
-                    view = BlackJackHitStandUI(casino_bot.Games[(interaction.channel.id, self.type)])
+                    view = BlackJackHitStandUI(global_vars.Games[(interaction.channel.id, self.type)])
             await interaction.response.send_message(view=view, ephemeral=True)                    
                 
         select.callback = select_callback

@@ -8,6 +8,7 @@ from typing import Callable, Awaitable, Type
 from database import Database
 from base_classes import Game, Player
 from ascii_obj import Ascii
+import global_vars
 
 class RNGPlayer(Player):
     def __init__(self, player_info):
@@ -31,10 +32,8 @@ class RNGGame(Game):
     bets: dict[int, list[RNGBet]]
     players: dict[int, RNGPlayer]
     last_roll: int | None
-    database: Database
-    def __init__(self, database: Database, name: str, lowest: int, highest: int, gametype: GameType, channel: discord.TextChannel):
-        super().__init__(database, channel, gametype)
-        self.database = database
+    def __init__(self, name: str, lowest: int, highest: int, gametype: GameType, channel: discord.TextChannel):
+        super().__init__(channel, gametype)
         self.name = name
         self.lowest = lowest
         self.highest = highest
@@ -59,19 +58,19 @@ class RNGGame(Game):
             return E.INV_PLAYER
         if number < self.lowest or number > self.highest:
             return E.OUT_OF_RANGE
-        if bet_amount > self.database.get_player_balance(player_info.id):
+        if bet_amount > global_vars.Data.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
         existing_bet = self.find_duplicite_bet(player_info, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
-            self.database.change_player_balance(player_info.id, -bet_amount)
+            global_vars.Data.change_player_balance(player_info.id, -bet_amount)
             return E.DUPLICITE_BET
 
         new_bet = RNGBet(self.players[player_info.id], bet_amount, odd)
         self.bets[number].append(new_bet)
-        self.database.change_player_balance(player_info.id, -bet_amount)
+        global_vars.Data.change_player_balance(player_info.id, -bet_amount)
         return E.SUCCESS
     
     def find_duplicite_bet(self, player_info: discord.User | discord.Member, number: int) -> RNGBet | None:
@@ -91,14 +90,14 @@ class RNGGame(Game):
 
         existing_bet = self.bets[temp[0]][temp[1]]
         number, index = temp
-        if new_bet_amount > self.database.get_player_balance(player_info.id):
+        if new_bet_amount > global_vars.Data.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
         if new_bet_amount != existing_bet.bet:
-            self.database.change_player_balance(player_info.id, existing_bet.bet)
+            global_vars.Data.change_player_balance(player_info.id, existing_bet.bet)
             existing_bet.bet = new_bet_amount
             existing_bet.possible_winning = new_bet_amount * new_odd
-            self.database.change_player_balance(player_info.id, -new_bet_amount)
+            global_vars.Data.change_player_balance(player_info.id, -new_bet_amount)
         
         if new_number != number:
             self.bets[number].pop(index)
@@ -131,7 +130,7 @@ class RNGGame(Game):
             if self.players.get(bet.player.player_info.id, None) is None:
                 retval = E.INV_PLAYER
                 continue
-            self.database.change_player_balance(bet.player.player_info.id, bet.possible_winning)
+            global_vars.Data.change_player_balance(bet.player.player_info.id, bet.possible_winning)
         return retval
     
     def build_winners_message(self, winning_bets: list[RNGBet]) -> str:
@@ -171,8 +170,8 @@ class RNGGame(Game):
         return message
 
 class Coinflip(RNGGame):
-    def __init__(self, data: Database, channel: discord.TextChannel):
-        super().__init__(data, "coinflip", 1, 2, GameType.COINFLIP, channel)
+    def __init__(self,channel: discord.TextChannel):
+        super().__init__("coinflip", 1, 2, GameType.COINFLIP, channel)
     
     # Override
     def get_bets_msg(self):
@@ -187,10 +186,10 @@ class Coinflip(RNGGame):
 class GuessTheNumber(RNGGame):
     rounds: int
     curr_round: int
-    def __init__(self, data: Database, channel: discord.TextChannel):
+    def __init__(self, channel: discord.TextChannel):
         self.rounds = 5
         self.curr_round = 1
-        super().__init__(data, "gtn", 1, 100, GameType.GUESSNUMBER, channel)
+        super().__init__("gtn", 1, 100, GameType.GUESSNUMBER, channel)
     
     def get_bets_msg(self):
         message = f"Current bets are as follows:\n" + 25 * '-' + '\n'
@@ -210,11 +209,11 @@ class GuessTheNumber(RNGGame):
         return math.ceil(2**(self.rounds) / (self.highest - self.lowest + 1))
 
 class RollTheDice(RNGGame):
-    def __init__(self, data: Database, channel: discord.TextChannel):
+    def __init__(self, channel: discord.TextChannel):
         self.rates : dict[int, float]
         self.last_dice1: int
         self.last_dice2: int
-        super().__init__(data, "rtd", 2, 12, GameType.ROLLTHEDICE, channel)
+        super().__init__("rtd", 2, 12, GameType.ROLLTHEDICE, channel)
         for number in range(-1, -7, -1):
             self.bets[number] = []
         self.rates = {
@@ -246,19 +245,19 @@ class RollTheDice(RNGGame):
             return E.INV_PLAYER
         if number < -6 or number in [0, 1] or number > 12:
             return E.OUT_OF_RANGE
-        if bet_amount > self.database.get_player_balance(player_info.id):
+        if bet_amount > global_vars.Data.get_player_balance(player_info.id):
             return E.INSUFFICIENT_FUNDS
 
         existing_bet = self.find_duplicite_bet(player_info.id, number)
         if existing_bet is not None:
             existing_bet.bet += bet_amount
             existing_bet.possible_winning = bet_amount * odd
-            self.database.change_player_balance(player_info.id, -bet_amount)
+            global_vars.Data.change_player_balance(player_info.id, -bet_amount)
             return E.DUPLICITE_BET
 
         new_bet = RNGBet(self.players[player_info.id], bet_amount, odd)
         self.bets[number].append(new_bet)
-        self.database.change_player_balance(player_info.id, -bet_amount)
+        global_vars.Data.change_player_balance(player_info.id, -bet_amount)
         return E.SUCCESS
     
     # Override
@@ -301,8 +300,8 @@ class RollTheDice(RNGGame):
 
 class Roulette(RNGGame):
 
-    def __init__(self, data: Database, channel: discord.TextChannel):
-        super().__init__(data, "roulette", 0, 36, GameType.ROULETTE, channel)
+    def __init__(self, channel: discord.TextChannel):
+        super().__init__("roulette", 0, 36, GameType.ROULETTE, channel)
 
 #              ││
 #              \/

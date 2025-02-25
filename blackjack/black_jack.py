@@ -43,8 +43,8 @@ class BlackJackDealer(BlackJackPlayer):
 class BlackJack(CardGame):
     dealer: BlackJackDealer
 
-    def __init__(self, data: Database, channel: discord.TextChannel):
-        super().__init__(data, channel, GameType.BLACKJACK)
+    def __init__(self, channel: discord.TextChannel):
+        super().__init__(channel, GameType.BLACKJACK)
         self.dealer = BlackJackDealer()
         self.players = {}
         self.state = GameState.WAITING_FOR_PLAYERS

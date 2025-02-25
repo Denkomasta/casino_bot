@@ -9,6 +9,7 @@ from poker.poker import Poker
 from abc import ABC, abstractmethod
 import traceback
 from database import Database
+import global_vars
 
 import discord
 
@@ -51,7 +52,6 @@ class CommandHandler:
     @staticmethod
     async def join(source: commands.Context | discord.Interaction):
         try:
-            import casino_bot
             options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
             if len(options) == 0:
                 from ui import GeneralCreateUI
@@ -67,7 +67,6 @@ class CommandHandler:
     async def play(source: commands.Context | discord.Interaction):
         try:
             from ui import GeneralPlayUI
-            import casino_bot
             await CommandHandler.send("", source, ephemeral=True, view=GeneralPlayUI())
         except:
             traceback.print_exc()
@@ -75,11 +74,10 @@ class CommandHandler:
     @staticmethod
     async def create(source: commands.Context | discord.Interaction):
         try:
-            import casino_bot
-            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in casino_bot.Games.keys()]
+            options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for type in GameType if (source.channel.id, type) not in global_vars.Games.keys()]
             if len(options) == 0:
                 from ui import GeneralJoinUI
-                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in casino_bot.Games.keys() if id == source.channel.id]
+                options = [discord.SelectOption(label=GameType(type).name, value=f"{type}") for id, type in global_vars.Games.keys() if id == source.channel.id]
                 await CommandHandler.send("All types of games already exists in this channel", source, ephemeral=True, view=GeneralJoinUI(options))
                 return
             from ui import GeneralCreateUI
@@ -89,34 +87,31 @@ class CommandHandler:
 
     @staticmethod
     async def balance(source: commands.Context | discord.Interaction):
-        import casino_bot
-        await CommandHandler.send(f'{casino_bot.Data.get_player_name(CommandHandler.get_id(source))} has casino balance: {casino_bot.Data.get_player_balance(CommandHandler.get_id(source))}', source, ephemeral=True, delete_after=5)
+        await CommandHandler.send(f'{global_vars.Data.get_player_name(CommandHandler.get_id(source))} has casino balance: {global_vars.Data.get_player_balance(CommandHandler.get_id(source))}', source, ephemeral=True, delete_after=5)
 
 
     @staticmethod
     async def drop(source: commands.Context | discord.Interaction):
-        import casino_bot
         import time
-        if casino_bot.Data.data.get(str(CommandHandler.get_id(source))) is None:
+        if global_vars.Data.data.get(str(CommandHandler.get_id(source))) is None:
             await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You must be a member of {casino_bot.BOTNAME} to participate!", source, ephemeral=True, delete_after=5)
             return
-        time_since_last = time.time() - casino_bot.Data.get_last_drop(CommandHandler.get_id(source))
+        time_since_last = time.time() - global_vars.Data.get_last_drop(CommandHandler.get_id(source))
         if time_since_last < 86400:
             time_to_next = 86400 - time_since_last
             await CommandHandler.send(f"You'll be able to get your next drop in {int(time_to_next // 3600)} hours and {int((time_to_next // 60) % 60)} minutes", source, ephemeral=True, delete_after=5)
             return
-        casino_bot.Data.change_player_balance(CommandHandler.get_id(source), 2000)
-        casino_bot.Data.update_last_drop(CommandHandler.get_id(source))
+        global_vars.Data.change_player_balance(CommandHandler.get_id(source), 2000)
+        global_vars.Data.update_last_drop(CommandHandler.get_id(source))
         await CommandHandler.send(f"{CommandHandler.get_info(source).mention} You got your daily drop of 2000 coins!", source, ephemeral=True, delete_after=5)
 
     @staticmethod
     async def leaderboard(source: commands.Context | discord.Interaction):
-        import casino_bot
         header = f"{'Rank':<5} {'Name':<25} {'Balance':<10}\n"
         header += "-" * 40 + "\n"
         
         rows = ""
-        for i, (name, balance) in enumerate(casino_bot.Data.get_leaderboard()):
+        for i, (name, balance) in enumerate(global_vars.Data.get_leaderboard()):
             rank = i + 1
             name = name[:25]
             rows += f"{rank:<5} {name:<25} {balance:<10}\n"
@@ -127,17 +122,16 @@ class CommandHandler:
     @staticmethod
     async def cmd_create(source: commands.Context | discord.Interaction, type: GameType):
         try:
-            import casino_bot
-            if ((source.channel.id, type) in casino_bot.Games.keys()):
+            if ((source.channel.id, type) in global_vars.Games.keys()):
                 await CommandHandler.send(f'Game of {GameType(type).name} already exists in your channel', source)
                 return
             
             if type not in CommandHandler.create_dict.keys():
                 await CommandHandler.send(f"Game of {GameType(type).name} not implemented yet", source, ephemeral=True)
                 return
-            game: Game = CommandHandler.create_dict[type](casino_bot.Data, source.channel)
+            game: Game = CommandHandler.create_dict[type](source.channel)
            
-            casino_bot.Games[(source.channel.id, type)] = game
+            global_vars.Games[(source.channel.id, type)] = game
             if game.type == GameType.POKER:
                 from poker.ui_poker import PokerSettingsUI
                 view = PokerSettingsUI(game)
@@ -145,17 +139,16 @@ class CommandHandler:
                 await view.wait()
             await game.channel.send(f'Game of {GameType(type).name} was created')
             from ui import JoinUI
-            await game.channel.send(view=JoinUI(casino_bot.Games[(source.channel.id, type)], type))
+            await game.channel.send(view=JoinUI(global_vars.Games[(source.channel.id, type)], type))
         except:
             traceback.print_exc()
 
     @staticmethod
     async def cmd_exit(source: commands.Context | discord.Interaction, game: Game):
-        import casino_bot
-        if ((game.channel.id, game.type) not in casino_bot.Games.keys()):
+        if ((game.channel.id, game.type) not in global_vars.Games.keys()):
             await CommandHandler.send(f'Game of {GameType(game.type).name} does not exist', source, ephemeral=True)
             return
-        casino_bot.Games.pop((game.channel.id, game.type))
+        global_vars.Games.pop((game.channel.id, game.type))
         await game.channel.send(f'Game of {GameType(game.type).name} was exited')
         return
 

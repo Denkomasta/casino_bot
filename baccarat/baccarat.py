@@ -39,8 +39,8 @@ class Baccarat(CardGame):
     banker: BaccaratFigure
     player: BaccaratFigure
 
-    def __init__(self, data, channel: discord.TextChannel):
-        super().__init__(data, channel, GameType.BACCARAT)
+    def __init__(self,channel: discord.TextChannel):
+        super().__init__(channel, GameType.BACCARAT)
         self.banker = BaccaratFigure()
         self.player = BaccaratFigure()
     

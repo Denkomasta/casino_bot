@@ -18,9 +18,9 @@ from rng_games.rng_games import Coinflip, RollTheDice, GuessTheNumber, Roulette
 from rng_games.cmd_handler_rng import CoinflipCmdHandler, RollTheDiceCmdHandler, GuessNumberCmdHandler
 from time import time
 import traceback
+import global_vars
 
-Games: dict[tuple[int, int], Game] = {}
-Data: Database = Database()
+
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -61,22 +61,16 @@ async def debug(ctx):
 # command for playing
 @bot.command(name='play', help='Choose game to play')
 async def play(ctx: commands.Context):
-    global Games
-    global Data
     await CommandHandler.play(ctx)
 
 # command for creating
 @bot.command(name='create', help='Choose game to create')
 async def create(ctx: commands.Context):
-    global Games
-    global Data
     await CommandHandler.create(ctx)
 
 # command for joining
 @bot.command(name='join', help='Choose game to join')
 async def join(ctx: commands.Context):
-    global Games
-    global Data
     await CommandHandler.join(ctx)
 
 # command for controls
@@ -88,17 +82,16 @@ async def controls(ctx: commands.Context):
 @bot.command(name='drop', help="Get your daily drop of money!")
 async def drop(ctx: commands.Context):
     try:
-        global Data
-        if Data.data.get(str(ctx.author.id)) is None:
+        if global_vars.Data.data.get(str(ctx.author.id)) is None:
             await ctx.send(f"{ctx.author.mention} You must be a member of {BOTNAME} to participate!")
             return
-        time_since_last = time() - Data.get_last_drop(ctx.author.id)
+        time_since_last = time() - global_vars.Data.get_last_drop(ctx.author.id)
         if time_since_last < 86400:
             time_to_next = 86400 - time_since_last
             await ctx.send(f"You'll be able to get your next drop in {int(time_to_next // 3600)} hours and {int((time_to_next // 60) % 60)} minutes")
             return
-        Data.change_player_balance(ctx.author.id, 2000)
-        Data.update_last_drop(ctx.author.id)
+        global_vars.Data.change_player_balance(ctx.author.id, 2000)
+        global_vars.Data.update_last_drop(ctx.author.id)
         await ctx.send(f"{ctx.author.mention} You got your daily drop of 2000 coins!")
     except Exception as e:
         traceback.print_exc()
@@ -106,19 +99,19 @@ async def drop(ctx: commands.Context):
 # command subsribe
 @bot.command(name='subscribe', help='Subscribe to casino to be able to play')
 async def subscribe(ctx):
-    if Data.add_player(ctx):
+    if global_vars.Data.add_player(ctx):
         await ctx.send(f'{ctx.author.global_name} is a new member of {BOTNAME}')
     else:
         await ctx.send(f'{ctx.author.global_name} is already a member of {BOTNAME}')
 
 # command unsubsribe
 @bot.command(name='unsubscribe', help='Delete your casino account', aliases=["delete", "leave"])
-async def subscribe(ctx):
-    curr_balance = Data.get_player_balance(ctx.author.id)
+async def unsubscribe(ctx):
+    curr_balance = global_vars.Data.get_player_balance(ctx.author.id)
     if curr_balance < 0:
         await ctx.send(f'{ctx.author.global_name}, you cannot delete your account, because you are in debt ({curr_balance} coins)!')
         return
-    Data.delete_player(ctx)
+    global_vars.Data.delete_player(ctx)
     await ctx.send(f'{ctx.author.global_name}\'s account was deleted.')
 
 # command info
@@ -144,7 +137,7 @@ async def info(ctx):
 # command balance
 @bot.command(name='balance', help='Check your casino balance.')
 async def balance(ctx):
-    await ctx.send(f'{Data.get_player_name(ctx.author.id)} has casino balance: {Data.get_player_balance(ctx.author.id)}')
+    await ctx.send(f'{global_vars.Data.get_player_name(ctx.author.id)} has casino balance: {global_vars.Data.get_player_balance(ctx.author.id)}')
 
 # command leaderboard
 @bot.command(name='leaderboard', help='Check how wealthy are you.')
@@ -153,7 +146,7 @@ async def leaderboard(ctx):
     header += "-" * 40 + "\n"
     
     rows = ""
-    for i, (name, balance) in enumerate(Data.get_leaderboard()):
+    for i, (name, balance) in enumerate(global_vars.Data.get_leaderboard()):
         rank = i + 1
         name = name[:25]
         rows += f"{rank:<5} {name:<25} {balance:<10}\n"
@@ -182,7 +175,7 @@ async def pay(ctx, mention: str = None, amount_s: str = None):
     receiver = mention
     receiver_id = int(mention.strip('<>@!'))
 
-    if not Data.is_player(receiver_id):
+    if not global_vars.Data.is_player(receiver_id):
         await ctx.send(f'{sender.mention}, you cannot send money to {receiver} as he is not a DisCas member.')
         return
 
@@ -194,13 +187,13 @@ async def pay(ctx, mention: str = None, amount_s: str = None):
         await ctx.send(f'{sender.mention}, you cannot pay yourself.')
         return
 
-    if Data.get_player_balance(sender.id) < amount:
+    if global_vars.Data.get_player_balance(sender.id) < amount:
         await ctx.send(f'{sender.mention}, you do not have enough money to pay {amount} to {receiver}.')
         return
 
     #critical section
-    Data.change_player_balance(sender.id, -amount)
-    Data.change_player_balance(receiver_id, amount)
+    global_vars.Data.change_player_balance(sender.id, -amount)
+    global_vars.Data.change_player_balance(receiver_id, amount)
     #critical section
 
     await ctx.send(f'{sender.mention} paid {receiver} {amount} coins!')
@@ -228,26 +221,25 @@ async def blackjack(ctx: commands.Context, *, arg_str):
     argv = arg_str.split(' ')
     if (len(argv) > 2 or len(argv) < 1):
         await ctx.send(f'Invalid number of arguments')
-    global Games
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.BLACKJACK) in Games.keys()):
+        if ((ctx.channel.id, GameType.BLACKJACK) in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.BLACKJACK)] = BlackJack(Data, ctx.channel)
+        global_vars.Games[(ctx.channel.id, GameType.BLACKJACK)] = BlackJack(ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join -bet-\' and start the game using \'start\'')
-        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BLACKJACK)], GameType.BLACKJACK))
+        await ctx.send(view=JoinUI(global_vars.Games[(ctx.channel.id, GameType.BLACKJACK)], GameType.BLACKJACK))
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.BLACKJACK) not in Games.keys()):
+        if ((ctx.channel.id, GameType.BLACKJACK) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop((ctx.channel.id, GameType.BLACKJACK))
+        global_vars.Games.pop((ctx.channel.id, GameType.BLACKJACK))
         await ctx.send(f'Game was exited')
         return
-    if ((ctx.channel.id, GameType.BLACKJACK) not in Games.keys()):
+    if ((ctx.channel.id, GameType.BLACKJACK) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
             return
-    await BlackJackCmdHandler.cmd_run(Games[(ctx.channel.id, GameType.BLACKJACK)], ctx, argv)
+    await BlackJackCmdHandler.cmd_run(global_vars.Games[(ctx.channel.id, GameType.BLACKJACK)], ctx, argv)
 
         # TODO add implementation of blackjack game
 
@@ -270,32 +262,31 @@ async def baccarat(ctx: commands.Context, *, arg_str):
     argv = arg_str.split(' ')
     if (len(argv) > 3 or len(argv) < 1):
         await ctx.send(f'Invalid number of arguments')
-    global Games
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.BACCARAT) in Games.keys()):
+        if ((ctx.channel.id, GameType.BACCARAT) in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(Data, ctx.channel)
+        global_vars.Games[(ctx.channel.id, GameType.BACCARAT)] = Baccarat(ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join -bet- -type-\' and start the game using \'start\'')
-        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
+        await ctx.send(view=JoinUI(global_vars.Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+        if ((ctx.channel.id, GameType.BACCARAT) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop((ctx.channel.id, GameType.BACCARAT))
+        global_vars.Games.pop((ctx.channel.id, GameType.BACCARAT))
         await ctx.send(f'Game was exited')
         return
     if (argv[0] == "join" and len(argv) == 1):
-        if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+        if ((ctx.channel.id, GameType.BACCARAT) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        await ctx.send(view=JoinUI(Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
+        await ctx.send(view=JoinUI(global_vars.Games[(ctx.channel.id, GameType.BACCARAT)], GameType.BACCARAT))
         return
-    if ((ctx.channel.id, GameType.BACCARAT) not in Games.keys()):
+    if ((ctx.channel.id, GameType.BACCARAT) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist, use \'!bj create\' to use commands')
             return
-    await BaccaratCmdHandler.cmd_run(Games[(ctx.channel.id, GameType.BACCARAT)], ctx, argv)
+    await BaccaratCmdHandler.cmd_run(global_vars.Games[(ctx.channel.id, GameType.BACCARAT)], ctx, argv)
 
 # command coinflip
 @bot.command(name='coinflip', aliases=["cf"])
@@ -318,26 +309,25 @@ async def coinflip(ctx: commands.Context, *, arg_str: str):
     if (len(argv) < 1):
         await ctx.send(f"No argument, run {CMD_PREFIX}cf help for available commands")
         return
-    global Games
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.COINFLIP) in Games.keys()):
+        if ((ctx.channel.id, GameType.COINFLIP) in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(Data, ctx.channel)
+        global_vars.Games[(ctx.channel.id, GameType.COINFLIP)] = Coinflip(global_vars.Data, ctx.channel)
         await ctx.send(f"Game was created, join the game using \'join\'")
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.COINFLIP) not in Games.keys()):
+        if ((ctx.channel.id, GameType.COINFLIP) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop((ctx.channel.id, GameType.COINFLIP))
+        global_vars.Games.pop((ctx.channel.id, GameType.COINFLIP))
         await ctx.send(f'Game was exited')
         return
-    if ((ctx.channel.id, GameType.COINFLIP) not in Games.keys()):
+    if ((ctx.channel.id, GameType.COINFLIP) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist, use \'!cf create\' to use commands')
             return
     try:
-        await CoinflipCmdHandler.command_run(Games[(ctx.channel.id, GameType.COINFLIP)], ctx, argv)
+        await CoinflipCmdHandler.command_run(global_vars.Games[(ctx.channel.id, GameType.COINFLIP)], ctx, argv)
     except Exception as e:
         print(e)
 
@@ -362,25 +352,24 @@ async def rollthedice(ctx: commands.Context, *, arg_str: str):
     if (len(argv) < 1):
         await ctx.send(f"No argument, run {CMD_PREFIX}rtd help for available commands")
         return
-    global Games
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.ROLLTHEDICE) in Games.keys()):
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(Data, ctx.channel)
+        global_vars.Games[(ctx.channel.id, GameType.ROLLTHEDICE)] = RollTheDice(ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join\'')
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+        if ((ctx.channel.id, GameType.ROLLTHEDICE) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
         Games.pop((ctx.channel.id, GameType.ROLLTHEDICE))
         await ctx.send(f'Game was exited')
         return
-    if ((ctx.channel.id, GameType.ROLLTHEDICE) not in Games.keys()):
+    if ((ctx.channel.id, GameType.ROLLTHEDICE) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist, use \'!rtd create\' to use commands')
             return
-    await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
+    await RollTheDiceCmdHandler.command_run(global_vars.Games[(ctx.channel.id, GameType.ROLLTHEDICE)], ctx, argv)
 
 # command roulette
 @bot.command(name='roulette', aliases=['rl'])
@@ -403,25 +392,24 @@ async def roulette(ctx: commands.Context, *, arg_str: str):
     if (len(argv) < 1):
         await ctx.send(f"No argument, run {CMD_PREFIX}rlt help for available commands")
         return
-    global Games
     if (argv[0] == "create"):
-        if ((ctx.channel.id, GameType.ROULETTE) in Games.keys()):
+        if ((ctx.channel.id, GameType.ROULETTE) in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
-        Games[(ctx.channel.id, GameType.ROULETTE)] = Roulette(Data, ctx.channel)
+        global_vars.Games[(ctx.channel.id, GameType.ROULETTE)] = Roulette(ctx.channel)
         await ctx.send(f'Game was created, join the game using \'join\'')
         return
     if (argv[0] == "exit"):
-        if ((ctx.channel.id, GameType.ROULETTE) not in Games.keys()):
+        if ((ctx.channel.id, GameType.ROULETTE) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop((ctx.channel.id, GameType.ROULETTE))
+        global_vars.Games.pop((ctx.channel.id, GameType.ROULETTE))
         await ctx.send(f'Game was exited')
         return
-    if ((ctx.channel.id, GameType.ROULETTE) not in Games.keys()):
+    if ((ctx.channel.id, GameType.ROULETTE) not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist, use \'!rlt create\' to use commands')
             return
-    await RollTheDiceCmdHandler.command_run(Games[(ctx.channel.id, GameType.ROULETTE)], ctx, argv)
+    await RollTheDiceCmdHandler.command_run(global_vars.Games[(ctx.channel.id, GameType.ROULETTE)], ctx, argv)
 
 # command slots
 @bot.command(name='slots', help='Play slot machine.')
@@ -449,35 +437,34 @@ async def GuessNumber(ctx: commands.Context, *, arg_str: str):
     if (len(argv) < 1):
         await ctx.send(f"No argument, run !cf help for available commands")
         return
-    global Games
     key = (ctx.channel.id, GameType.GUESSNUMBER)
     if (argv[0] == "create"):
-        if (key in Games.keys()):
+        if (key in global_vars.Games.keys()):
             await ctx.send(f'Game already exists in your channel, use \'exit\' first')
             return
 
         try:
-            Games[key] = GuessTheNumber(Data, ctx.channel)
+            global_vars.Games[key] = GuessTheNumber(ctx.channel)
         except Exception as e:
             print(f"Error creating game: {e}")
             await ctx.send(f'Error creating game')
             return
 
         await ctx.send(f'Game was created, join the game using \'join\'')
-        await ctx.send(view=JoinUI(Games[key], GameType.GUESSNUMBER))
+        await ctx.send(view=JoinUI(global_vars.Games[key], GameType.GUESSNUMBER))
         return
     if (argv[0] == "exit"):
-        if (key not in Games.keys()):
+        if (key not in global_vars.Games.keys()):
             await ctx.send(f'Game does not exist')
             return
-        Games.pop(key)
+        global_vars.Games.pop(key)
         await ctx.send(f'Game was exited')
         return
-    if (key not in Games.keys()):
+    if (key not in global_vars.Games.keys()):
         await ctx.send(f'Game does not exist, use \'{CMD_PREFIX}gtn create\' to use commands')
         return
     try:
-        await GuessNumberCmdHandler.command_run(Games[key], ctx, argv)
+        await GuessNumberCmdHandler.command_run(global_vars.Games[key], ctx, argv)
     except Exception as e:
         print(e)
 
@@ -492,7 +479,7 @@ async def on_message(message):
         return
 
     # nonsubscriber handling
-    if not Data.is_player(message.author.id):
+    if not global_vars.Data.is_player(message.author.id):
         if not (message.content.startswith(f"{CMD_PREFIX}subscribe") or message.content.startswith(f"{CMD_PREFIX}help") or message.content.startswith(f"{CMD_PREFIX}hello")):
             await message.channel.send(f'{message.author.mention}, you need to subscribe to be able to use {BOTNAME}, use {CMD_PREFIX}help if you are lost.')
             return
@@ -508,12 +495,12 @@ async def on_message(message):
 
 @bot.event
 async def on_close():
-    Data.save_stats()
+    global_vars.Data.save_stats()
     print("Bot disconnected, stats saved.")
 
 def signal_handler(signal, frame):
     print("Gracefully shutting down...")
-    Data.save_stats()
+    global_vars.Data.save_stats()
     asyncio.create_task(bot.close())
     sys.exit(0)
 
