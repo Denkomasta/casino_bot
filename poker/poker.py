@@ -46,6 +46,8 @@ class Poker(CardGame):
         self.banks_changeable = True
         self.preset_bank: int | None = None
         self.first_round = True
+        self.winner_rank = -1
+        self.winner_cards = []
     
     def game_start(self):
         self.get_blinds()
@@ -204,7 +206,8 @@ class Poker(CardGame):
     def evaluate_winners(self):
         for pot in self.pots.values():
             best_rank, temp = self.determine_winner(pot.players)
-            best_rank += 0  # TODO add usage of rank for printing of result message
+            self.winner_rank = best_rank
+            self.winner_cards = temp[0][1]
             pot.winners = [record[0] for record in temp]
 
             for winner in pot.winners:
@@ -244,6 +247,36 @@ class Poker(CardGame):
                     show += f"{player.player_info.name}"
                 show += f" each winning bank of {pot.bank // len(pot.winners)}\n\n"
         return show
+
+    def show_winning_combination(self) -> str:
+        ranks = {
+            9: "Royal Flush",
+            8: "Straight Flush",
+            7: "Four of a Kind",
+            6: "Full House",
+            5: "Flush",
+            4: "Straight",
+            3: "Three of a Kind",
+            2: "Two Pair",
+            1: "One Pair",
+            0: "High Card"
+        }
+        res = ""
+        res += f"Winning combination is **{ranks[self.winner_rank]}**:\nWith cards: "
+        for card in self.winner_cards:
+            res += Ascii.get_value_symbol(card.value) + Ascii.get_symbol(card.suit) + " "
+        
+        res += "\n"
+
+        self.sort_poker_combination()
+        for index in range(5):
+            for card in self.winner_cards:
+                res += "".join(Ascii.get_card(card.suit, card.value, card.showable)[index])
+            res += "\n"
+
+        self.winner_rank = -1
+        self.winner_cards = []
+        return res
 
     def sort_poker_cards(self, cards: list[Card]) -> list[Card]:
         return sorted(cards, key=lambda card: card.value, reverse=True)
@@ -517,3 +550,43 @@ class Poker(CardGame):
             elif curr_value == max_val:
                 res.append((player, hand))
         return res
+
+    def sort_poker_combination(self) -> None:
+        hand = self.winner_cards
+        values = [card.value for card in hand]
+        rank = self.winner_rank
+        sorted_hand = []
+
+        if rank == 9:  # Royal Flush
+            sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
+        elif rank == 8:  # Straight Flush
+            sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
+        elif rank == 7:  # Four of a Kind
+            four_of_a_kind = [card for card in hand if values.count(card.value) == 4]
+            kicker = [card for card in hand if values.count(card.value) != 4]
+            sorted_hand = four_of_a_kind + kicker
+        elif rank == 6:  # Full House
+            three_of_a_kind = [card for card in hand if values.count(card.value) == 3]
+            pair = [card for card in hand if values.count(card.value) == 2]
+            sorted_hand = three_of_a_kind + pair
+        elif rank == 5:  # Flush
+            sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
+        elif rank == 4:  # Straight
+            sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
+        elif rank == 3:  # Three of a Kind
+            three_of_a_kind = [card for card in hand if values.count(card.value) == 3]
+            kickers = [card for card in hand if values.count(card.value) != 3]
+            sorted_hand = three_of_a_kind + sorted(kickers, key=lambda card: card.value, reverse=True)
+        elif rank == 2:  # Two Pair
+            pairs = [card for card in hand if values.count(card.value) == 2]
+            kicker = [card for card in hand if values.count(card.value) != 2]
+            sorted_hand = sorted(pairs, key=lambda card: card.value, reverse=True) + kicker
+        elif rank == 1:  # One Pair
+            pair = [card for card in hand if values.count(card.value) == 2]
+            kickers = [card for card in hand if values.count(card.value) != 2]
+            sorted_hand = pair + sorted(kickers, key=lambda card: card.value, reverse=True)
+        else:  # High Card
+            sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
+
+        self.winner_cards = sorted_hand
+        

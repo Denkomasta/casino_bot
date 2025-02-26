@@ -139,7 +139,7 @@ class PokerCmdHandler(CommandHandler):
             game.evaluate_winners()
         else:
             game.insta_win()
-        await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}```")
+        await game.channel.send(f"```\n{game.show_game()}\n{game.show_players_after_game()}\n{game.show_winners()}\n{game.show_winning_combination()}```")
         game.game_restart()
         from ui import BetUI, JoinLeaveUI
         await game.channel.send("Are you new here? Do you want to join? Or you are bored already?", view=JoinLeaveUI(game, GameType.POKER))
