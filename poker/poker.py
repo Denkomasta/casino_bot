@@ -553,7 +553,9 @@ class Poker(CardGame):
 
     def sort_poker_combination(self) -> None:
         hand = self.winner_cards
-        values = [card.value for card in hand]
+        values = {}
+        for card in hand:
+            values[card.value] = values.get(card.value, 0) + 1
         rank = self.winner_rank
         sorted_hand = []
 
@@ -562,28 +564,28 @@ class Poker(CardGame):
         elif rank == 8:  # Straight Flush
             sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
         elif rank == 7:  # Four of a Kind
-            four_of_a_kind = [card for card in hand if values.count(card.value) == 4]
-            kicker = [card for card in hand if values.count(card.value) != 4]
+            four_of_a_kind = [card for card in hand if values[card.value] == 4]
+            kicker = [card for card in hand if values[card.value] != 4]
             sorted_hand = four_of_a_kind + kicker
         elif rank == 6:  # Full House
-            three_of_a_kind = [card for card in hand if values.count(card.value) == 3]
-            pair = [card for card in hand if values.count(card.value) == 2]
+            three_of_a_kind = [card for card in hand if values[card.value] == 3]
+            pair = [card for card in hand if values[card.value] == 2]
             sorted_hand = three_of_a_kind + pair
         elif rank == 5:  # Flush
             sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
         elif rank == 4:  # Straight
             sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
         elif rank == 3:  # Three of a Kind
-            three_of_a_kind = [card for card in hand if values.count(card.value) == 3]
-            kickers = [card for card in hand if values.count(card.value) != 3]
+            three_of_a_kind = [card for card in hand if values[card.value] == 3]
+            kickers = [card for card in hand if values[card.value] != 3]
             sorted_hand = three_of_a_kind + sorted(kickers, key=lambda card: card.value, reverse=True)
         elif rank == 2:  # Two Pair
-            pairs = [card for card in hand if values.count(card.value) == 2]
-            kicker = [card for card in hand if values.count(card.value) != 2]
+            pairs = [card for card in hand if values[card.value] == 2]
+            kicker = [card for card in hand if values[card.value] != 2]
             sorted_hand = sorted(pairs, key=lambda card: card.value, reverse=True) + kicker
         elif rank == 1:  # One Pair
-            pair = [card for card in hand if values.count(card.value) == 2]
-            kickers = [card for card in hand if values.count(card.value) != 2]
+            pair = [card for card in hand if values[card.value] == 2]
+            kickers = [card for card in hand if values[card.value] != 2]
             sorted_hand = pair + sorted(kickers, key=lambda card: card.value, reverse=True)
         else:  # High Card
             sorted_hand = sorted(hand, key=lambda card: card.value, reverse=True)
