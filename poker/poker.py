@@ -251,6 +251,9 @@ class Poker(CardGame):
         return show
 
     def show_winning_combination(self) -> str:
+        if self.winner_rank == -1:
+            return ""
+
         ranks = {
             9: "Royal Flush",
             8: "Straight Flush",
