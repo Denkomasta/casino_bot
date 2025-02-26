@@ -557,7 +557,11 @@ class Poker(CardGame):
         hand = self.winner_cards
         values = {}
         for card in hand:
-            values[card.value] = values.get(card.value, 0) + 1
+            val = card.value
+            if val == 1:
+                val = 14
+                card.value = 14
+            values[val] = values.get(val, 0) + 1
         rank = self.winner_rank
         sorted_hand = []
 
