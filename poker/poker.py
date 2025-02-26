@@ -50,6 +50,7 @@ class Poker(CardGame):
         self.winner_cards = []
     
     def game_start(self):
+        self.state = GameState.RUNNING
         self.get_blinds()
 
         for _ in range(2):
@@ -90,6 +91,7 @@ class Poker(CardGame):
         return bank
 
     def round_restart(self):
+        self.state = GameState.WAITING_FOR_PLAYERS
         self.round_bet = 0
         for player in self.players.values():
             player.round_bet = 0
