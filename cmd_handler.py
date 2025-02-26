@@ -213,10 +213,13 @@ class CommandHandler:
         if (len(args) != 2):
             await CommandHandler.send(f"Invalid number of arguments: is {len(args)} should be 2", source)
             return
+        if game.state == GameState.RUNNING:
+            await CommandHandler.send(f"You can't change bet while game is running", source, ephemeral=True, delete_after=5)
+            return
         try:
             bet = int(args[1])
         except Exception as _:
-            await CommandHandler.send(f"Argument [bet] has to be number, try again", source, ephemeral=True)
+            await CommandHandler.send(f"Argument [bet] has to be number, try again", source, ephemeral=True, delete_after=5)
             return
         game.change_bet(CommandHandler.get_info(source), bet)
         if game.type == GameType.POKER and (not game.banks_changeable and not game.first_round):
