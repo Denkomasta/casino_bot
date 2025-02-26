@@ -91,7 +91,6 @@ class Poker(CardGame):
         return bank
 
     def round_restart(self):
-        self.state = GameState.WAITING_FOR_PLAYERS
         self.round_bet = 0
         for player in self.players.values():
             player.round_bet = 0
@@ -113,6 +112,7 @@ class Poker(CardGame):
         self.table.cards = []
         self.pots = {}
         self.first_round = False
+        self.state = GameState.WAITING_FOR_PLAYERS
         for player in self.players.values():
             player.state = PlayerState.NOT_READY
             player.round_bet = 0
